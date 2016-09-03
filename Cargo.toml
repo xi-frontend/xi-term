@@ -1,0 +1,10 @@
+[package]
+name = "xi-tui"
+version = "0.1.0"
+authors = ["Corentin Henry <corentinhenry@gmail.com>"]
+
+[dependencies]
+termion = "*"
+jsonrpc-core = "*"
+clipboard = "0.1.2"
+serde_json = "0.7.2"
