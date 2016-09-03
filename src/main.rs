@@ -10,7 +10,9 @@ use std::{thread, time};
 
 fn main() {
     let mut core = Core::new("../xi-editor/rust/target/debug/xi-core");
+    thread::sleep(time::Duration::from_millis(1000));
     core.open("foo.txt");
+    thread::sleep(time::Duration::from_millis(1000));
     core.char('h');
     core.char('e');
     core.char('l');
