@@ -7,12 +7,6 @@ use std::io::prelude::*;
 use serde_json::{self,Value};
 use serde_json::builder::*;
 
-macro_rules! println_err (
-    ($($arg:tt)*) => { {
-        writeln!(&mut ::std::io::stderr(), $($arg)*).expect("failed printing to stderr");
-    } }
-);
-
 pub struct Core {
     stdin: ChildStdin,
     pub update_rx: mpsc::Receiver<Value>,
@@ -41,14 +35,15 @@ impl Core {
             for line in BufReader::new(stdout).lines() {
                 if let Ok(data) = serde_json::from_slice::<Value>(line.unwrap().as_bytes()) {
                     let req = data.as_object().unwrap();
-                    println!("received {:?}", req);
+                    info!("received {:?}", req);
                     if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
                         rpc_tx.send((id.as_u64().unwrap(), result.clone())).unwrap();
+                        info!("Sent: {:?}", (id.as_u64().unwrap(), result.clone()));
                     } else if let (Some(method), Some(params)) = (req.get("method"), req.get("params")) {
-                        if method.as_string().unwrap() == "update" {
+                        if method.as_str().unwrap() == "update" {
                             update_tx.send(params.clone()).unwrap();
                         } else {
-                            panic!("Unknown method {:?}.", method.as_string().unwrap());
+                            panic!("Unknown method {:?}.", method.as_str().unwrap());
                         }
                     } else {
                         panic!("Could not parse the core output: {:?}", req);
@@ -62,40 +57,50 @@ impl Core {
             let buf_reader = BufReader::new(stderr);
             for line in buf_reader.lines() {
                 if let Ok(line) = line {
-                    println_err!("[core] {}", line);
+                    error!("[core] {}", line);
                 }
             }
         });
 
         let stdin = process.stdin.unwrap();
 
-        let mut core = Core {
-            stdin: stdin,
-            update_rx: update_rx,
-            rpc_rx: rpc_rx,
-            rpc_index: 0,
-            tab: "".into(),
-        };
-        core.tab = core.call_sync("new_tab", ArrayBuilder::new().unwrap()).as_string().map(|s|s.into()).unwrap();
+        let mut core = Core { stdin: stdin, update_rx: update_rx, rpc_rx: rpc_rx, rpc_index: 0, tab: "".into() };
+        core.tab = core.call_sync("new_tab", ArrayBuilder::new().build()).as_str().map(|s|s.into()).unwrap();
         core
     }
 
-    fn call(&mut self, method: &str, params: Value) -> u64 {
+    /// Build and send a JSON RPC request, returning the associated request ID to pair it with
+    /// the response
+    fn request(&mut self, method: &str, params: Value) -> u64 {
         self.rpc_index += 1;
         let message = ObjectBuilder::new()
             .insert("id", self.rpc_index)
             .insert("method", method)
             .insert("params", params)
-            .unwrap();
-        let mut str_msg = serde_json::ser::to_string(&message).unwrap();
-        println!("sending: {}", str_msg);
-        str_msg.push('\n');
-        self.stdin.write(&str_msg.as_bytes()).unwrap();
+            .build();
+        self.send(&message);
         self.rpc_index
     }
 
+    /// Build and send a JSON RPC notification. No synchronous response is expected, so
+    /// there is no ID.
+    fn notify(&mut self, method: &str, params: Value) {
+        let message = ObjectBuilder::new()
+            .insert("method", method)
+            .insert("params", params)
+            .build();
+        self.send(&message);
+    }
+
+    /// Serialize JSON object and send it to the server
+    fn send(&mut self, message: &Value) {
+        let mut str_msg = serde_json::ser::to_string(&message).unwrap();
+        str_msg.push('\n');
+        self.stdin.write(&str_msg.as_bytes()).unwrap();
+    }
+
     fn call_sync(&mut self, method: &str, params: Value) -> Value {
-        let i = self.call(method, params);
+        let i = self.request(method, params);
         let (id,result) = self.rpc_rx.recv().unwrap();
         assert_eq!(i, id);
         result
@@ -105,24 +110,24 @@ impl Core {
         let obj = ObjectBuilder::new()
             .insert("method", method)
             .insert("tab", &self.tab)
-            .insert("params", params.unwrap_or(ArrayBuilder::new().unwrap()));
-        self.call("edit", obj.unwrap());
+            .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
+        self.notify("edit", obj.build());
     }
 
     fn call_edit_sync(&mut self, method: &str, params: Option<Value>) -> Value{
         let obj = ObjectBuilder::new()
             .insert("method", method)
             .insert("tab", &self.tab)
-            .insert("params", params.unwrap_or(ArrayBuilder::new().unwrap()));
-        self.call_sync("edit", obj.unwrap())
+            .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
+        self.call_sync("edit", obj.build())
     }
 
     pub fn save(&mut self, filename: &str) {
-        self.call_edit("save", Some(ObjectBuilder::new().insert("filename", filename).unwrap()));
+        self.call_edit("save", Some(ObjectBuilder::new().insert("filename", filename).build()));
     }
 
     pub fn open(&mut self, filename: &str) {
-        self.call_edit("open", Some(ObjectBuilder::new().insert("filename", filename).unwrap()));
+        self.call_edit("open", Some(ObjectBuilder::new().insert("filename", filename).build()));
     }
 
     pub fn left(&mut self) { self.call_edit("move_left", None); }
@@ -152,28 +157,28 @@ impl Core {
     pub fn f2(&mut self) { self.call_edit("debug_test_fg_spans", None); }
 
     pub fn char(&mut self, ch: char) {
-        self.call_edit("insert", Some(ObjectBuilder::new().insert("chars", ch).unwrap()));
+        self.call_edit("insert", Some(ObjectBuilder::new().insert("chars", ch).build()));
     }
 
     pub fn scroll(&mut self, start: u64, end: u64) {
-        self.call_edit("scroll", Some(ArrayBuilder::new().push(start).push(end).unwrap()));
+        self.call_edit("scroll", Some(ArrayBuilder::new().push(start).push(end).build()));
     }
 
     pub fn click(&mut self, line: u64, column: u64) {
-        self.call_edit("click", Some(ArrayBuilder::new().push(line).push(column).push(0).push(1).unwrap()));
+        self.call_edit("click", Some(ArrayBuilder::new().push(line).push(column).push(0).push(1).build()));
     }
     pub fn drag(&mut self, line: u64, column: u64) {
-        self.call_edit("drag", Some(ArrayBuilder::new().push(line).push(column).push(0).push(1).unwrap()));
+        self.call_edit("drag", Some(ArrayBuilder::new().push(line).push(column).push(0).push(1).build()));
     }
 
     pub fn copy(&mut self) -> String {
-        self.call_edit_sync("copy", None).as_string().map(|x|x.into()).unwrap()
+        self.call_edit_sync("copy", None).as_str().map(|x|x.into()).unwrap()
     }
     pub fn cut(&mut self) -> String {
-        self.call_edit_sync("cut", None).as_string().map(|x|x.into()).unwrap()
+        self.call_edit_sync("cut", None).as_str().map(|x|x.into()).unwrap()
     }
     pub fn paste(&mut self, s: String) {
-        self.call_edit("insert", Some(ObjectBuilder::new().insert("chars", s).unwrap()));
+        self.call_edit("insert", Some(ObjectBuilder::new().insert("chars", s).build()));
     }
 
     #[allow(dead_code)]
