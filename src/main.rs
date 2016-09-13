@@ -125,5 +125,6 @@ fn main() {
             let scrollto = update.get("scrollto").unwrap().as_array().unwrap();
             screen.handle_update(lines, scrollto[0].as_u64().unwrap() as u16, scrollto[1].as_u64().unwrap() as u16);
         }
+        thread::sleep_ms(10);
     }
 }
