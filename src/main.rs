@@ -1,4 +1,6 @@
-#![feature(rustc_private)]
+#![feature(plugin)]
+#![plugin(clippy)]
+// #![deny(clippy_pedantic)]
 extern crate termion;
 extern crate serde_json;
 #[macro_use]
@@ -8,49 +10,57 @@ extern crate log4rs;
 
 mod core;
 
-use termion::{color, style, clear, cursor};
+use termion::{clear, cursor};
 use termion::raw::IntoRawMode;
 use termion::input::TermRead;
-use termion::event::Key;
-use std::io::{stdin, stdout, Write, Read};
-use std::io;
-use core::Core;
-use std::{thread, time};
+use std::io::{stdout, Write, stdin};
 use std::sync::mpsc;
+use std::{thread, time};
+use core::Core;
 
-struct Screen<W: Write> {
-    stdout: W,
-    x: u16,
-    y: u16,
-    exit: bool,
+struct Screen {
+    stdout: termion::raw::RawTerminal<std::io::Stdout>,
+    size: (u16, u16),
 }
 
-fn init<W: Write>(mut stdout: W, x: u16, y: u16) -> Screen<W> {
-    write!(stdout, "{}", clear::All).unwrap();
-    stdout.flush();
-    Screen {
-        x: x,
-        y: y,
-        stdout: stdout,
-        exit: false,
+
+impl Screen {
+
+    fn new() -> Screen {
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        write!(stdout, "{}", clear::All).unwrap();
+        stdout.flush().unwrap();
+        Screen {
+            size: termion::terminal_size().unwrap(),
+            stdout: stdout,
+        }
     }
-}
 
-impl<W: Write> Screen<W> {
-    fn handle_update(&mut self, lines: Vec<String>, x: u16, y: u16) {
-        write!(self.stdout, "{}", termion::clear::All);
-        write!(self.stdout, "{}", cursor::Up(self.y));
-        for (i, line) in lines.into_iter().enumerate() {
-            self.stdout.write_all(line.as_bytes());
-            write!(self.stdout, "{}", cursor::Left(self.x));
+    fn redraw(&mut self, lines: Vec<String>) {
+        write!(self.stdout, "{}", termion::clear::All).unwrap();
+        write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
+        for (_, line) in lines.into_iter().enumerate() {
+            self.stdout.write_all(line.as_bytes()).unwrap();
+            write!(self.stdout, "{}", cursor::Left(self.size.0)).unwrap();
         }
         self.stdout.flush();
+    }
+
+}
+
+fn update_screen(core: &mut Core, screen: &mut Screen) {
+    if let Ok(update_msg) = core.update_rx.try_recv() {
+        let update = update_msg.as_object().unwrap().get("update").unwrap().as_object().unwrap();
+        let lines = update.get("lines").unwrap().as_array().unwrap().into_iter().map(|line| line.as_array().unwrap()[0].as_str().unwrap().to_string()).collect();
+        screen.redraw(lines);
+    } else {
+        thread::sleep_ms(10);
     }
 }
 
 pub struct Input {
-    tx: mpsc::Sender<Option<termion::event::Key>>,
-    rx: mpsc::Receiver<Option<termion::event::Key>>
+    tx: mpsc::Sender<termion::event::Event>,
+    rx: mpsc::Receiver<termion::event::Event>,
 }
 
 impl Input {
@@ -65,66 +75,57 @@ impl Input {
     pub fn run(&mut self) {
         let tx = self.tx.clone();
         thread::spawn(move || {
-            for k in stdin().keys() {
-                tx.send(Some(k.unwrap()));
+            for event_res in stdin().events() {
+                match event_res {
+                    Ok(event) => {
+                        info!("event: {:?}", event);
+                        tx.send(event).unwrap();
+                    },
+                    Err(err) => {
+                        error!("{:?}", err);
+                    }
+                }
             }
         });
     }
-
-    pub fn into_iter(&mut self) -> InputIntoIterator {
-        InputIntoIterator {
-            input: self
-        }
-    }
 }
 
-pub struct InputIntoIterator<'a> {
-    input: &'a mut Input,
-}
 
-impl <'a>Iterator for InputIntoIterator<'a> {
-
-    type Item = Option<termion::event::Key>;
-
-    fn next(&mut self) -> Option<Option<termion::event::Key>> {
-        let data = self.input.rx.try_recv();
-        if data.is_ok() {
-            return Some(data.unwrap());
-        }
-        else {
-            return Some(None);
-        }
-    }
-}
 
 fn main() {
     log4rs::init_file("log_config.yaml", Default::default()).unwrap();
     let mut core = Core::new("../xi-editor/rust/target/debug/xi-core");
-    let mut stdout = stdout().into_raw_mode().unwrap();
-    let size = termion::terminal_size().unwrap();
-    let mut screen = init(stdout, size.0, size.1);
-
+    let mut screen = Screen::new();
     let mut input = Input::new();
     input.run();
-    let mut keys = input.into_iter();
     loop {
-        if let Some(key) = keys.next().unwrap() {
-            match key {
-                termion::event::Key::Char(c) => {
-                    &mut core.char(c);
+        if let Ok(event) = input.rx.try_recv() {
+            match event {
+                termion::event::Event::Key(key) => {
+                    match key {
+                        termion::event::Key::Char(c) => {
+                            core.char(c);
+                        },
+                        termion::event::Key::Ctrl(c) => {
+                            if c == 'c' {
+                                info!("received ^C: exiting");
+                                return;
+                            }
+                        },
+                        _ => {
+                            error!("unsupported key event");
+                        }
+                    }
+                },
+                termion::event::Event::Mouse(_) => {
+                    error!("mouse events are not supported yet");
                 }
-                _ => {}
+                _ => {
+                    error!("unsupported event");
+                }
             }
+        } else {
+            update_screen(&mut core, &mut screen);
         }
-        if let Ok(update_msg) = core.update_rx.try_recv() {
-            let update = update_msg.as_object().unwrap().get("update").unwrap().as_object().unwrap();
-            // first_line = dict.get("first_line").unwrap().as_u64().unwrap();
-            // height = dict.get("height").unwrap().as_u64().unwrap();
-            let lines = update.get("lines").unwrap().as_array().unwrap().into_iter().map(
-                |line| line.as_array().unwrap()[0].as_str().unwrap().to_string()).collect();
-            let scrollto = update.get("scrollto").unwrap().as_array().unwrap();
-            screen.handle_update(lines, scrollto[0].as_u64().unwrap() as u16, scrollto[1].as_u64().unwrap() as u16);
-        }
-        thread::sleep_ms(10);
     }
 }

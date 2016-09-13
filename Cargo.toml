@@ -8,6 +8,7 @@ yaml = []
 yaml_format = []
 
 [dependencies]
+clippy = "*"
 termion = "*"
 jsonrpc-core = "*"
 clipboard = "0.1.2"
