@@ -180,6 +180,21 @@ fn main() {
                                 return;
                             }
                         },
+                        termion::event::Key::Backspace => {
+                            core.del();
+                        },
+                        termion::event::Key::Left => {
+                            core.left();
+                        },
+                        termion::event::Key::Right => {
+                            core.right();
+                        },
+                        termion::event::Key::Up => {
+                            core.up();
+                        },
+                        termion::event::Key::Down => {
+                            core.down();
+                        },
                         _ => {
                             error!("unsupported key event");
                         }
