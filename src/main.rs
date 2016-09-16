@@ -45,13 +45,13 @@ impl Screen {
         }
         // this is pretty weird
         write!(self.stdout, "{}", cursor::Goto(update.scroll_to.1 as u16 + 1, update.scroll_to.0 as u16 + 1)).unwrap();
-        self.stdout.flush();
+        self.stdout.flush().unwrap();
     }
 
     fn init(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
-        self.stdout.flush();
+        self.stdout.flush().unwrap();
     }
 
 }
