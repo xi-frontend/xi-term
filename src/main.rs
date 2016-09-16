@@ -117,7 +117,7 @@ fn update_screen(core: &mut Core, screen: &mut Screen) {
         let update = Update::from_value(msg.as_object().unwrap().get("update").unwrap());
         screen.redraw(&update);
     } else {
-        thread::sleep_ms(10);
+        thread::sleep(time::Duration::from_millis(10));
     }
 }
 
