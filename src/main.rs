@@ -36,15 +36,25 @@ impl Screen {
         }
     }
 
-    fn redraw(&mut self, lines: Vec<String>) {
+    fn redraw(&mut self, mut update: &Update) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
-        for (_, line) in lines.into_iter().enumerate() {
-            self.stdout.write_all(line.as_bytes()).unwrap();
+        for (_, line) in update.lines.iter().enumerate() {
             write!(self.stdout, "{}", cursor::Left(self.size.0)).unwrap();
+            self.stdout.write_all(line.text.as_bytes()).unwrap();
         }
+        // this is pretty weird
+        write!(self.stdout, "{}", cursor::Goto(update.scroll_to.1 as u16 + 1, update.scroll_to.0 as u16 + 1)).unwrap();
         self.stdout.flush();
     }
+
+    fn init(&mut self) {
+        write!(self.stdout, "{}", termion::clear::All).unwrap();
+        write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
+        self.stdout.flush();
+    }
+
+}
 
 struct Update {
     lines: Vec<Line>,
@@ -151,6 +161,7 @@ fn main() {
     let mut screen = Screen::new();
     let mut input = Input::new();
     input.run();
+    screen.init();
     loop {
         if let Ok(event) = input.rx.try_recv() {
             match event {
