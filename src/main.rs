@@ -153,7 +153,11 @@ impl Input {
     }
 }
 
-
+impl Default for Input {
+	fn default() -> Self {
+		Self::new()
+	}
+}
 
 fn main() {
     log4rs::init_file("log_config.yaml", Default::default()).unwrap();
