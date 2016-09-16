@@ -36,7 +36,7 @@ impl Screen {
         }
     }
 
-    fn redraw(&mut self, mut update: &Update) {
+    fn redraw(&mut self, update: &Update) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
         for (_, line) in update.lines.iter().enumerate() {
