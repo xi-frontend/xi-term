@@ -112,7 +112,9 @@ impl Core {
             .insert("method", method)
             .insert("tab", &self.tab)
             .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
-        self.notify("edit", obj.build());
+        let built_obj = obj.build();
+        info!("Sent     {:?}", built_obj);
+        self.notify("edit", built_obj);
     }
 
     fn call_edit_sync(&mut self, method: &str, params: Option<Value>) -> Value{
