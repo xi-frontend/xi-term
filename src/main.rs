@@ -15,7 +15,7 @@ use termion::raw::IntoRawMode;
 use termion::input::TermRead;
 use std::io::{stdout, Write, stdin};
 use std::sync::mpsc;
-use std::{thread, time};
+use std::{thread, time, env, cmp};
 use core::Core;
 
 struct Screen {
@@ -42,7 +42,7 @@ impl Screen {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
 
-        let nb_lines = update.lines.len();
+        let nb_lines = cmp::min(update.lines.len(), self.size.1 as usize);
         if nb_lines > 0 {
             for line in update.lines.iter().take(nb_lines - 1) {
                 write!(self.stdout, "{}", cursor::Left(self.size.0)).unwrap();
@@ -191,7 +191,7 @@ fn main() {
     core.scroll(0, screen.size.1 as u64 - 2);
 
     let mut current_file: Option<String> = None;
-    if let Some(filename) = std::env::args().nth(1) {
+    if let Some(filename) = env::args().nth(1) {
         core.open(filename.as_str());
         current_file = Some(filename);
     }
@@ -235,6 +235,12 @@ fn main() {
                         },
                         termion::event::Key::Down => {
                             core.down();
+                        },
+                        termion::event::Key::PageUp => {
+                            core.page_up();
+                        },
+                        termion::event::Key::PageDown => {
+                            core.page_down();
                         },
                         _ => {
                             error!("unsupported key event");
