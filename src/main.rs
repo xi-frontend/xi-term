@@ -36,15 +36,37 @@ impl Screen {
         }
     }
 
+    // TODO: handle lines that are longer than terminal width.
+    // Should we wrap them or truncate them?
     fn redraw(&mut self, update: &Update) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
-        for (_, line) in update.lines.iter().enumerate() {
+
+        let nb_lines = update.lines.len();
+        if nb_lines > 0 {
+            for line in update.lines.iter().take(nb_lines - 1) {
+                write!(self.stdout, "{}", cursor::Left(self.size.0)).unwrap();
+                self.stdout.write_all(line.text.as_bytes()).unwrap();
+            }
+
+            // If the last line has a trailing \n, we need to remove it
+            let mut last_line = update.lines[nb_lines - 1].text.clone();
+            match last_line.pop() {
+                Some('\n') | None => {
+                },
+                Some(c) => {
+                    last_line.push(c);
+                }
+            }
             write!(self.stdout, "{}", cursor::Left(self.size.0)).unwrap();
-            self.stdout.write_all(line.text.as_bytes()).unwrap();
+            self.stdout.write_all(last_line.as_bytes()).unwrap();
         }
-        // this is pretty weird
-        write!(self.stdout, "{}", cursor::Goto(update.scroll_to.1 as u16 + 1, update.scroll_to.0 as u16 + 1)).unwrap();
+
+        write!(self.stdout, "{}", cursor::Goto(
+                // columns
+                update.scroll_to.1 as u16 + 1,
+                // lines
+                (update.scroll_to.0 - update.first_line + 1) as u16)).unwrap();
         self.stdout.flush().unwrap();
     }
 
@@ -71,7 +93,6 @@ impl Update {
         for line in object.get("lines").unwrap().as_array().unwrap().iter() {
             lines.push(Line::from_value(line));
         }
-        info!("{:?}", object);
         Update {
             height: object.get("height").unwrap().as_u64().unwrap(),
             first_line: object.get("first_line").unwrap().as_u64().unwrap(),
@@ -113,6 +134,8 @@ impl Line {
 }
 
 fn update_screen(core: &mut Core, screen: &mut Screen) {
+    // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
+    // and a `scroll` command for future updates.
     if let Ok(msg) = core.update_rx.try_recv() {
         let update = Update::from_value(msg.as_object().unwrap().get("update").unwrap());
         screen.redraw(&update);
@@ -141,7 +164,6 @@ impl Input {
             for event_res in stdin().events() {
                 match event_res {
                     Ok(event) => {
-                        info!("event: {:?}", event);
                         tx.send(event).unwrap();
                     },
                     Err(err) => {
@@ -166,6 +188,7 @@ fn main() {
     let mut input = Input::new();
     input.run();
     screen.init();
+    core.scroll(0, screen.size.1 as u64 - 2);
     loop {
         if let Ok(event) = input.rx.try_recv() {
             match event {
