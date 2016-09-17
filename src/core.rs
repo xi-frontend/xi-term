@@ -36,10 +36,10 @@ impl Core {
             for line in BufReader::new(stdout).lines() {
                 if let Ok(data) = serde_json::from_slice::<Value>(line.unwrap().as_bytes()) {
                     let req = data.as_object().unwrap();
-                    info!("received {:?}", req);
+                    info!("<<< {:?}", req);
                     if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
                         rpc_tx.send((id.as_u64().unwrap(), result.clone())).unwrap();
-                        info!("Sent: {:?}", (id.as_u64().unwrap(), result.clone()));
+                        info!(">>> {:?}", (id.as_u64().unwrap(), result.clone()));
                     } else if let (Some(method), Some(params)) = (req.get("method"), req.get("params")) {
                         if method.as_str().unwrap() == "update" {
                             update_tx.send(params.clone()).unwrap();
@@ -113,7 +113,7 @@ impl Core {
             .insert("tab", &self.tab)
             .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
         let built_obj = obj.build();
-        info!("Sent     {:?}", built_obj);
+        info!(">>> {:?}", built_obj);
         self.notify("edit", built_obj);
     }
 
