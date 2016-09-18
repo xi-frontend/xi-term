@@ -26,3 +26,15 @@
 
 - @potocpav for the json-rpc client I stole from [xi_glium](https://github.com/potocpav/xi_glium).
 - @ticki for [termion](https://github.com/ticki/termion), on which this project is based.
+
+## Caveats
+
+### Tabs
+
+We assume tabs (`\t`) are 4 columns large. It that is not the case in your
+terminal, the cursor position will be inaccurate. On linux, to set the `\t`
+width to four spaces, do:
+
+```
+tabs -4
+```

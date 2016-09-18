@@ -62,11 +62,17 @@ impl Screen {
             self.stdout.write_all(last_line.as_bytes()).unwrap();
         }
 
-        write!(self.stdout, "{}", cursor::Goto(
-                // columns
-                update.scroll_to.1 as u16 + 1,
-                // lines
-                (update.scroll_to.0 - update.first_line + 1) as u16)).unwrap();
+        let cursor_line_idx = update.scroll_to.0 - update.first_line;
+        let mut cursor_line = update.lines[cursor_line_idx as usize].text.clone();
+        let mut cols =  0;
+        for c in cursor_line.chars().take(update.scroll_to.1 as usize) {
+            if c == '\t' {
+                cols += 4;
+            } else {
+                cols += 1;
+            }
+        }
+        write!(self.stdout, "{}", cursor::Goto(cols as u16 + 1, cursor_line_idx as u16 + 1)).unwrap();
         self.stdout.flush().unwrap();
     }
 
