@@ -38,3 +38,9 @@ width to four spaces, do:
 ```
 tabs -4
 ```
+
+### Line wrapping
+
+Line wrapping is completely unsupported for now. Lines that are too long will
+mess up the output. I'm not even sure if line wrapping should occur in the
+backend or in the frontend.
