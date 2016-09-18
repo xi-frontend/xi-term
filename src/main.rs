@@ -10,16 +10,17 @@ extern crate log4rs;
 
 mod core;
 
-use termion::{clear, cursor};
+use termion::{clear, cursor, color};
 use termion::raw::IntoRawMode;
-use termion::input::TermRead;
+use termion::input::{TermRead, MouseTerminal};
 use std::io::{stdout, Write, stdin};
 use std::sync::mpsc;
 use std::{thread, time, env, cmp};
 use core::Core;
 
+
 struct Screen {
-    stdout: termion::raw::RawTerminal<std::io::Stdout>,
+    stdout: termion::input::MouseTerminal<termion::raw::RawTerminal<std::io::Stdout>>,
     size: (u16, u16),
 }
 
@@ -27,7 +28,7 @@ struct Screen {
 impl Screen {
 
     fn new() -> Screen {
-        let mut stdout = stdout().into_raw_mode().unwrap();
+        let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", clear::All).unwrap();
         stdout.flush().unwrap();
         Screen {
@@ -46,7 +47,32 @@ impl Screen {
         if nb_lines > 0 {
             for line in update.lines.iter().take(nb_lines - 1) {
                 write!(self.stdout, "{}", cursor::Left(self.size.0)).unwrap();
-                self.stdout.write_all(line.text.as_bytes()).unwrap();
+
+                if let Some(selection) = line.selection {
+                    let start = selection.0 as usize;
+                    let end = selection.1 as usize;
+                    let mut str_before = String::new();
+                    for c in line.text.chars().take(start) {
+                        str_before.push(c);
+                    }
+                    let mut str_selection = String::new();
+                    for c in line.text.chars().skip(start).take(end) {
+                        str_selection.push(c);
+                    }
+                    let mut str_after = String::new();
+                    for c in line.text.chars().skip(end) {
+                        str_after.push(c);
+                    }
+                    write!(self.stdout, "{}{}{}{}{}{}",
+                           termion::style::Reset,
+                           str_before,
+                           termion::color::Bg(color::Red),
+                           str_selection,
+                           termion::style::Reset,
+                           str_after).unwrap();
+                } else {
+                    self.stdout.write_all(line.text.as_bytes()).unwrap();
+                }
             }
 
             // If the last line has a trailing \n, we need to remove it
@@ -63,7 +89,7 @@ impl Screen {
         }
 
         let cursor_line_idx = update.scroll_to.0 - update.first_line;
-        let mut cursor_line = update.lines[cursor_line_idx as usize].text.clone();
+        let cursor_line = update.lines[cursor_line_idx as usize].text.clone();
         let mut cols =  0;
         for c in cursor_line.chars().take(update.scroll_to.1 as usize) {
             if c == '\t' {
@@ -253,9 +279,17 @@ fn main() {
                         }
                     }
                 },
-                termion::event::Event::Mouse(_) => {
-                    error!("mouse events are not supported yet");
-                }
+                termion::event::Event::Mouse(e) => {
+                    match e {
+                        termion::event::MouseEvent::Press(_, y, x) => {
+                            core.click(x as u64 - 1, y as u64 - 1);
+                        },
+                        termion::event::MouseEvent::Release(_, _) => {},
+                        termion::event::MouseEvent::Hold(y, x) => {
+                            core.drag(x as u64 - 1, y as u64 - 1);
+                        },
+                    }
+                },
                 _ => {
                     error!("unsupported event");
                 }
