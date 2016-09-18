@@ -16,4 +16,5 @@ serde_json = "*"
 log = "0.3"
 
 [dependencies.log4rs]
+version = "0.4.8"
 features = ["yaml"]
