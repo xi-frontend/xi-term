@@ -16,8 +16,6 @@
     - [X] loading an existing file
     - [X] saving current file
 
-`xi` is still very incomplete so it's hard to make long term plans.
-
 ## Screenshot
 
 ![screencast showing basic edition of this README.md file](https://github.com/little-dude/xi-tui/blob/master/img/demo.gif)
