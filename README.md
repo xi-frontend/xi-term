@@ -6,12 +6,15 @@
 
 - [X] basic editing
 - [X] quit
-- [X] scrolling (still some issues with "Page Up")
 - [X] cursor handling
-- [ ] selection
+- [-] scrolling
+    - [X] with keyboard (still some issues with "Page Up")
+    - [-] with mouse
+- [-] selection
+    - [X] with mouse
+    - [ ] with keyboard
 - [ ] yank/paste
-- [ ] mouse support
-- [ ] operating on files
+- [-] operating on files
     - [ ] opening a new file
     - [X] loading an existing file
     - [X] saving current file
