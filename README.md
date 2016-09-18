@@ -20,7 +20,7 @@
 
 ## Screenshot
 
-![screencast showing basic edition of this README.md file]("img/demo.gif")
+![screencast showing basic edition of this README.md file]("https://github.com/little-dude/xi-tui/blob/master/img/demo.gif")
 
 ## Credits
 
