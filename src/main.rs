@@ -6,6 +6,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
+extern crate unicode_width;
 
 
 mod core;
@@ -17,6 +18,7 @@ use std::io::{stdout, Write, stdin};
 use std::sync::mpsc;
 use std::{thread, time, env, cmp};
 use core::Core;
+use unicode_width::UnicodeWidthChar;
 
 struct Screen {
     stdout: termion::raw::RawTerminal<std::io::Stdout>,
@@ -36,8 +38,7 @@ impl Screen {
         }
     }
 
-    // TODO: handle lines that are longer than terminal width.
-    // Should we wrap them or truncate them?
+    // FIXME: line wrapping
     fn redraw(&mut self, update: &Update) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
@@ -49,7 +50,8 @@ impl Screen {
                 self.stdout.write_all(line.text.as_bytes()).unwrap();
             }
 
-            // If the last line has a trailing \n, we need to remove it
+            // If the last line has a trailing \n, we need to remove it, because it we write it on
+            // stdout, everything is shifted one line up.
             let mut last_line = update.lines[nb_lines - 1].text.clone();
             match last_line.pop() {
                 Some('\n') | None => {
@@ -62,11 +64,15 @@ impl Screen {
             self.stdout.write_all(last_line.as_bytes()).unwrap();
         }
 
-        write!(self.stdout, "{}", cursor::Goto(
-                // columns
-                update.scroll_to.1 as u16 + 1,
-                // lines
-                (update.scroll_to.0 - update.first_line + 1) as u16)).unwrap();
+        let cursor_line_idx = update.scroll_to.0 - update.first_line;
+        let mut cursor_line = update.lines[cursor_line_idx as usize].text.clone();
+        let mut cols =  0;
+        for c in cursor_line.chars().take(update.scroll_to.1 as usize) {
+            if let Some(width) = UnicodeWidthChar::width(c) {
+                cols += width;
+            }
+        }
+        write!(self.stdout, "{}", cursor::Goto(cols as u16 + 1, cursor_line_idx as u16 + 1)).unwrap();
         self.stdout.flush().unwrap();
     }
 
