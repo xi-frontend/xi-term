@@ -1,5 +1,5 @@
-#![feature(plugin)]
-#![plugin(clippy)]
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
 // #![deny(clippy_pedantic)]
 extern crate termion;
 extern crate serde_json;
