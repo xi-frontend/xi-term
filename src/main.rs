@@ -215,7 +215,7 @@ impl Default for Input {
 
 fn main() {
     log4rs::init_file("log_config.yaml", Default::default()).unwrap();
-    let mut core = Core::new("../xi-editor/rust/target/debug/xi-core");
+    let mut core = Core::new("xi-core");
     let mut screen = Screen::new();
     let mut input = Input::new();
     input.run();
