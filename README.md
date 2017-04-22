@@ -28,6 +28,19 @@
 - @potocpav for the json-rpc client I stole from [xi_glium](https://github.com/potocpav/xi_glium).
 - @ticki for [termion](https://github.com/ticki/termion), on which this project is based.
 
+## Running the Core
+
+The frontend assumes that you have installed the [core editor](https://github.com/google/xi-editor)
+and is available in your PATH. The following should suffice:
+
+```bash
+git clone https://github.com/google/xi-editor
+cd xi-editor/rust
+cargo install
+# You now need to add ~/.cargo/bin to your PATH (this is where `cargo install`
+# places binaries). In your .bashrc (or equivalent), add `export PATH=$PATH:~/.cargo/bin`
+```
+
 ## Caveats
 
 ### Tabs
