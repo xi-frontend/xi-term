@@ -1,3 +1,7 @@
+# WARNING
+
+I have not worked on this for a while, it's not working with recent Xi versions.
+
 # xi-tui
 
 `xi-tui` is a TUI frontend for [xi](https://github.com/google/xi-editor/).
