@@ -1,19 +1,24 @@
 #![allow(dead_code)]
-use std::sync::mpsc;
-use std::thread;
-use std::process::{Stdio,Command,ChildStdin};
+use std::collections::hash_map::HashMap;
 use std::io::BufReader;
 use std::io::prelude::*;
+use std::process::ChildStdin;
+use std::process::Command;
+use std::process::Stdio;
+use std::sync::mpsc;
+use std::thread;
 
-use serde_json::{self,Value};
+use serde_json;
 use serde_json::builder::*;
+use serde_json::Value;
 
 pub struct Core {
     stdin: ChildStdin,
     pub update_rx: mpsc::Receiver<Value>,
     rpc_rx: mpsc::Receiver<(u64,Value)>, // ! A simple piping works only for synchronous calls.
     rpc_index: u64,
-    tab: String,
+    current_view: String,
+    views: HashMap<String, String>,
 }
 
 impl Core {
@@ -65,8 +70,17 @@ impl Core {
 
         let stdin = process.stdin.unwrap();
 
-        let mut core = Core { stdin: stdin, update_rx: update_rx, rpc_rx: rpc_rx, rpc_index: 0, tab: "".into() };
-        core.tab = core.call_sync("new_tab", ArrayBuilder::new().build()).as_str().map(|s|s.into()).unwrap();
+        let mut core = Core {
+            stdin: stdin,
+            update_rx: update_rx,
+            rpc_rx: rpc_rx,
+            rpc_index: 0,
+            current_view: "".into(),
+            views: HashMap::new(),
+        };
+        let view_id = core.new_view(Some(file.to_string())).as_str().unwrap().to_string();
+        core.views.insert(view_id.clone(), file.to_string());
+        core.current_view = view_id;
         core
     }
 
@@ -110,7 +124,7 @@ impl Core {
     fn call_edit(&mut self, method: &str, params: Option<Value>) {
         let obj = ObjectBuilder::new()
             .insert("method", method)
-            .insert("tab", &self.tab)
+            .insert("view_id", &self.current_view)
             .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
         let built_obj = obj.build();
         info!(">>> {:?}", built_obj);
@@ -120,13 +134,25 @@ impl Core {
     fn call_edit_sync(&mut self, method: &str, params: Option<Value>) -> Value{
         let obj = ObjectBuilder::new()
             .insert("method", method)
-            .insert("tab", &self.tab)
+            .insert("view_id", &self.current_view)
             .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
         self.call_sync("edit", obj.build())
     }
 
-    pub fn save(&mut self, filename: &str) {
-        self.call_edit("save", Some(ObjectBuilder::new().insert("filename", filename).build()));
+    pub fn new_view(&mut self, file_path: Option<String>) -> Value {
+        let mut obj = ObjectBuilder::new();
+        if file_path.is_some() {
+            obj = obj.insert("file_path", file_path.unwrap());
+        }
+        self.call_sync("new_view", obj.build())
+    }
+
+    pub fn save(&mut self) {
+        let save_params = ObjectBuilder::new()
+            .insert("view_id", &self.current_view)
+            .insert("file_path", self.views.get(&self.current_view).unwrap())
+            .build();
+        self.request("save", save_params);
     }
 
     pub fn open(&mut self, filename: &str) {

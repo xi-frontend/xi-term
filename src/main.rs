@@ -38,12 +38,6 @@ fn main() {
     screen.init();
     core.scroll(0, screen.size.1 as u64 - 2);
 
-    let mut current_file: Option<String> = None;
-    if let Some(filename) = env::args().nth(1) {
-        core.open(filename.as_str());
-        current_file = Some(filename);
-    }
-
     loop {
         if let Ok(event) = input.try_recv() {
             match event {
@@ -60,11 +54,7 @@ fn main() {
                                 },
                                 'w' => {
                                     info!("received ^W: writing current file");
-                                    if let Some(ref filename) = current_file {
-                                        core.save(filename.as_str());
-                                    } else {
-                                        error!("no file to save");
-                                    }
+                                    core.save();
                                 },
                                 _ => {}
                             }
