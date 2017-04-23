@@ -9,6 +9,14 @@ pub struct View {
 }
 
 impl View {
+    pub fn new(filepath: String) -> View {
+        View {
+            last_rev: 0,
+            filepath: filepath,
+            lines: vec![],
+        }
+    }
+
     pub fn update(&mut self, update: &Update) {
         if self.last_rev > update.rev {
             return;
