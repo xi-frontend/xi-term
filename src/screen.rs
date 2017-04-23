@@ -35,6 +35,8 @@ impl Screen {
     // TODO: handle lines that are longer than terminal width.
     // Should we wrap them or truncate them?
     pub fn redraw(&mut self, update: &Update) {
+        unimplemented!();
+        /*
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
 
@@ -94,6 +96,7 @@ impl Screen {
             }
         }
         self.scroll(cols + 1, cursor_line_idx + 1);
+        */
     }
 
     pub fn scroll(&mut self, col: u64, line: u64) {
