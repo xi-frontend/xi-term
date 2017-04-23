@@ -8,56 +8,16 @@ extern crate serde_json;
 extern crate termion;
 
 mod core;
+mod input;
 mod line;
 mod update;
 mod screen;
 
 use std::env;
-use std::io::stdin;
-use std::sync::mpsc;
-use std::thread;
-
-use termion::input::TermRead;
 
 use core::Core;
+use input::Input;
 use screen::Screen;
-
-pub struct Input {
-    tx: mpsc::Sender<termion::event::Event>,
-    rx: mpsc::Receiver<termion::event::Event>,
-}
-
-impl Input {
-    pub fn new() -> Input {
-        let (tx, rx) = mpsc::channel();
-        Input {
-            tx: tx,
-            rx: rx,
-        }
-    }
-
-    pub fn run(&mut self) {
-        let tx = self.tx.clone();
-        thread::spawn(move || {
-            for event_res in stdin().events() {
-                match event_res {
-                    Ok(event) => {
-                        tx.send(event).unwrap();
-                    },
-                    Err(err) => {
-                        error!("{:?}", err);
-                    }
-                }
-            }
-        });
-    }
-}
-
-impl Default for Input {
-	fn default() -> Self {
-		Self::new()
-	}
-}
 
 fn main() {
     log4rs::init_file("log_config.yaml", Default::default()).unwrap();
@@ -75,7 +35,7 @@ fn main() {
     }
 
     loop {
-        if let Ok(event) = input.rx.try_recv() {
+        if let Ok(event) = input.try_recv() {
             match event {
                 termion::event::Event::Key(key) => {
                     match key {
