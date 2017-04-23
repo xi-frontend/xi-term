@@ -50,4 +50,44 @@ impl Op {
             lines: lines,
         }
     }
+
+    pub fn apply(&self, old_lines: &Vec<Line>, old_line_index: u64, new_lines: &mut Vec<Line>) -> u64 {
+        match self.op {
+            OpType::Cpy => {
+                let new_index = old_line_index + self.n;
+                for i in old_line_index..new_index {
+                    new_lines.push(old_lines[i as usize].clone());
+                }
+                new_index
+            },
+            OpType::Skip => {
+                old_line_index + self.n
+            },
+            OpType::Invalidate => {
+                let new_index = old_line_index + self.n;
+                for i in old_line_index..new_index {
+                    let mut line = old_lines[i as usize].clone();
+                    line.cursor = Some(vec![]);
+                    new_lines.push(line);
+                }
+                new_index
+            },
+            OpType::Update => {
+                let new_index = old_line_index + self.n;
+                let lines = self.lines.clone().unwrap();
+                for i in old_line_index..new_index {
+                    let mut line = old_lines[i as usize].clone();
+                    line.cursor = lines[i as usize].cursor.clone();
+                    line.styles = lines[i as usize].styles.clone();
+                    new_lines.push(line);
+                }
+                new_index
+            },
+            OpType::Ins => {
+                let lines = self.lines.clone().unwrap();
+                new_lines.extend(lines.iter().cloned());
+                old_line_index + self.n
+            },
+        }
+    }
 }
