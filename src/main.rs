@@ -1,21 +1,24 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 // #![deny(clippy_pedantic)]
-extern crate termion;
-extern crate serde_json;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
+extern crate serde_json;
+extern crate termion;
 
 mod core;
 mod line;
 mod update;
 mod screen;
 
-use termion::input::TermRead;
+use std::env;
 use std::io::stdin;
 use std::sync::mpsc;
-use std::{thread, time, env};
+use std::thread;
+use std::time;
+
+use termion::input::TermRead;
 
 use core::Core;
 use update::Update;
