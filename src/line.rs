@@ -1,9 +1,10 @@
 use serde_json;
 
+#[derive(Clone)]
 pub struct Line {
-    text: Option<String>,
-    cursor: Option<Vec<u64>>,
-    styles: Option<Vec<i64>>,
+    pub text: Option<String>,
+    pub cursor: Option<Vec<u64>>,
+    pub styles: Option<Vec<i64>>,
 }
 
 impl Line {
