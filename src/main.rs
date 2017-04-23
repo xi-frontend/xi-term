@@ -12,6 +12,7 @@ extern crate termion;
 mod core;
 mod input;
 mod line;
+mod op;
 mod update;
 mod screen;
 
