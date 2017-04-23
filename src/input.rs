@@ -39,9 +39,3 @@ impl Input {
         self.rx.try_recv()
     }
 }
-
-impl Default for Input {
-	fn default() -> Self {
-		Self::new()
-	}
-}
