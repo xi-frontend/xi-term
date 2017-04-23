@@ -2,6 +2,8 @@ use std;
 use std::cmp;
 use std::io::stdout;
 use std::io::Write;
+use std::thread;
+use std::time;
 
 use termion;
 use termion::clear;
@@ -11,6 +13,7 @@ use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
 use termion::raw::RawTerminal;
 
+use core::Core;
 use update::Update;
 
 pub struct Screen {
@@ -98,5 +101,16 @@ impl Screen {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
         self.stdout.flush().unwrap();
+    }
+
+    pub fn update(&mut self, core: &mut Core) {
+        // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
+        // and a `scroll` command for future updates.
+        if let Ok(msg) = core.update_rx.try_recv() {
+            let update = Update::from_value(msg.as_object().unwrap().get("update").unwrap());
+            self.redraw(&update);
+        } else {
+            thread::sleep(time::Duration::from_millis(10));
+        }
     }
 }

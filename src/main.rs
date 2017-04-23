@@ -16,24 +16,11 @@ use std::env;
 use std::io::stdin;
 use std::sync::mpsc;
 use std::thread;
-use std::time;
 
 use termion::input::TermRead;
 
 use core::Core;
-use update::Update;
 use screen::Screen;
-
-fn update_screen(core: &mut Core, screen: &mut Screen) {
-    // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
-    // and a `scroll` command for future updates.
-    if let Ok(msg) = core.update_rx.try_recv() {
-        let update = Update::from_value(msg.as_object().unwrap().get("update").unwrap());
-        screen.redraw(&update);
-    } else {
-        thread::sleep(time::Duration::from_millis(10));
-    }
-}
 
 pub struct Input {
     tx: mpsc::Sender<termion::event::Event>,
@@ -154,7 +141,7 @@ fn main() {
                 }
             }
         } else {
-            update_screen(&mut core, &mut screen);
+            screen.update(&mut core);
         }
     }
 }
