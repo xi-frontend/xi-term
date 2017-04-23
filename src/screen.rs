@@ -93,7 +93,11 @@ impl Screen {
                 cols += 1;
             }
         }
-        write!(self.stdout, "{}", cursor::Goto(cols as u16 + 1, cursor_line_idx as u16 + 1)).unwrap();
+        self.scroll(cols + 1, cursor_line_idx + 1);
+    }
+
+    pub fn scroll(&mut self, col: u64, line: u64) {
+        write!(self.stdout, "{}", cursor::Goto(col as u16, line as u16)).unwrap();
         self.stdout.flush().unwrap();
     }
 
