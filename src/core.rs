@@ -17,10 +17,10 @@ pub struct Core {
 }
 
 impl Core {
-    pub fn new(executable: &str) -> Core {
+    pub fn new(executable: &str, file: &str) -> Core {
         // spawn the core process
         let process = Command::new(executable)
-                                .arg("test-file")
+                                .arg(file)
                                 .stdout(Stdio::piped())
                                 .stdin(Stdio::piped())
                                 .stderr(Stdio::piped())
