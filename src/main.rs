@@ -13,8 +13,9 @@ mod core;
 mod input;
 mod line;
 mod op;
-mod update;
 mod screen;
+mod update;
+mod view;
 
 use std::env;
 
