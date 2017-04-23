@@ -3,8 +3,8 @@ use serde_json;
 use op::Op;
 
 pub struct Update {
-    rev: u64,
-    ops: Vec<Op>,
+    pub rev: u64,
+    pub ops: Vec<Op>,
 }
 
 impl Update {
