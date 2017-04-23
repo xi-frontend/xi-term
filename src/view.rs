@@ -1,9 +1,10 @@
 use line::Line;
 use update::Update;
 
+#[derive(Clone)]
 pub struct View {
     last_rev: u64,
-    filepath: String,
+    pub filepath: String,
     lines: Vec<Line>,
 }
 
