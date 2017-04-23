@@ -9,6 +9,8 @@ extern crate log4rs;
 
 
 mod core;
+mod line;
+mod update;
 
 use termion::{clear, cursor, color};
 use termion::raw::IntoRawMode;
@@ -17,6 +19,7 @@ use std::io::{stdout, Write, stdin};
 use std::sync::mpsc;
 use std::{thread, time, env, cmp};
 use core::Core;
+use update::Update;
 
 
 struct Screen {
@@ -108,61 +111,6 @@ impl Screen {
         self.stdout.flush().unwrap();
     }
 
-}
-
-struct Update {
-    lines: Vec<Line>,
-    height: u64,
-    scroll_to: (u64, u64),
-    first_line: u64
-}
-
-impl Update {
-    fn from_value(value: &serde_json::Value) -> Update {
-        let object = value.as_object().unwrap();
-        let scroll_to = object.get("scrollto").unwrap().as_array().unwrap();
-        let mut lines: Vec<Line> = vec![];
-        for line in object.get("lines").unwrap().as_array().unwrap().iter() {
-            lines.push(Line::from_value(line));
-        }
-        Update {
-            height: object.get("height").unwrap().as_u64().unwrap(),
-            first_line: object.get("first_line").unwrap().as_u64().unwrap(),
-            lines: lines,
-            scroll_to: (scroll_to[0].as_u64().unwrap(), scroll_to[1].as_u64().unwrap()),
-        }
-    }
-}
-
-struct Line {
-    text: String,
-    selection: Option<(u64, u64)>,
-    cursor: Option<u64>,
-}
-
-impl Line {
-    fn from_value(value: &serde_json::Value) -> Line {
-        let line_arr = value.as_array().unwrap();
-        let mut line = Line {
-            text: line_arr[0].as_str().unwrap().to_string(),
-            cursor: None,
-            selection: None,
-        };
-        for annotation in line_arr.iter().skip(1).map(|a| a.as_array().unwrap()) {
-            match annotation[0].as_str().unwrap() {
-                "cursor" => {
-                    line.cursor = Some(annotation[1].as_u64().unwrap());
-                },
-                "sel" => {
-                    line.selection = Some((annotation[1].as_u64().unwrap(), annotation[2].as_u64().unwrap()));
-                },
-                _ => {
-                    error!("unknown annotation");
-                }
-            }
-        }
-        line
-    }
 }
 
 fn update_screen(core: &mut Core, screen: &mut Screen) {
