@@ -46,8 +46,10 @@ impl Core {
                         rpc_tx.send((id.as_u64().unwrap(), result.clone())).unwrap();
                         info!(">>> {:?}", (id.as_u64().unwrap(), result.clone()));
                     } else if let (Some(method), Some(params)) = (req.get("method"), req.get("params")) {
-                        if method.as_str().unwrap() == "update" {
-                            update_tx.send(params.clone()).unwrap();
+                        let meth = method.as_str().unwrap();
+                        if meth == "set_style" || meth == "scroll_to" || meth == "update" {
+                            let request = ArrayBuilder::new().push(method.clone()).push(params.clone()).build();
+                            update_tx.send(request).unwrap();
                         } else {
                             panic!("Unknown method {:?}.", method.as_str().unwrap());
                         }
