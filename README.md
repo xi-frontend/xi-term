@@ -2,6 +2,13 @@
 
 I have not worked on this for a while, it's not working with recent Xi versions.
 
+The latest SHA on [xi-core](https://github.com/google/xi-editor/) that we are
+compatible with is 429da468f6819765e969807a41ff19680316ddce. Follow the
+installation instructions below (in "Running the Core"), but do a `git checkout
+429da468f6819765e969807a41ff19680316ddce` first. If you have already done a
+`cargo install` for some other version of the core, you may need to do `cargo
+install --force` to replace the existing installation.
+
 # xi-tui
 
 `xi-tui` is a TUI frontend for [xi](https://github.com/google/xi-editor/).
