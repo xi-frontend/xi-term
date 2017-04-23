@@ -12,13 +12,15 @@ use serde_json;
 use serde_json::builder::*;
 use serde_json::Value;
 
+use view::View;
+
 pub struct Core {
     stdin: ChildStdin,
     pub update_rx: mpsc::Receiver<Value>,
     rpc_rx: mpsc::Receiver<(u64,Value)>, // ! A simple piping works only for synchronous calls.
     rpc_index: u64,
     current_view: String,
-    views: HashMap<String, String>,
+    views: HashMap<String, View>,
 }
 
 impl Core {
@@ -81,7 +83,8 @@ impl Core {
             views: HashMap::new(),
         };
         let view_id = core.new_view(Some(file.to_string())).as_str().unwrap().to_string();
-        core.views.insert(view_id.clone(), file.to_string());
+        let view = View::new(file.to_string());
+        core.views.insert(view_id.clone(), view);
         core.current_view = view_id;
         core
     }
@@ -150,9 +153,10 @@ impl Core {
     }
 
     pub fn save(&mut self) {
+        let views = self.views.clone();
         let save_params = ObjectBuilder::new()
-            .insert("view_id", &self.current_view)
-            .insert("file_path", self.views.get(&self.current_view).unwrap())
+            .insert("view_id", &self.current_view.clone())
+            .insert("file_path", views.get(&self.current_view).unwrap().filepath.clone())
             .build();
         self.request("save", save_params);
     }
