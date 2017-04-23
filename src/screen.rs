@@ -111,8 +111,19 @@ impl Screen {
         // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
         // and a `scroll` command for future updates.
         if let Ok(msg) = core.update_rx.try_recv() {
-            let update = Update::from_value(msg.as_object().unwrap().get("update").unwrap());
-            self.redraw(&update);
+            let msg_list = msg.as_array().unwrap();
+            let (method, params) = (msg_list[0].as_str().unwrap(), msg_list[1].as_object().unwrap());
+            if method == "update" {
+                let update = Update::from_value(params.get("update").unwrap());
+                self.redraw(&update);
+            } else if method == "scroll_to" {
+                let (col, line) = (params.get("col").unwrap().as_u64().unwrap(), params.get("line").unwrap().as_u64().unwrap());
+                self.scroll(col, line);
+            } else if method == "set_style" {
+                // TODO: ???
+            } else {
+                info!("Unknown request from backend {:?}", method);
+            }
         } else {
             thread::sleep(time::Duration::from_millis(10));
         }
