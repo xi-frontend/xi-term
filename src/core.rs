@@ -12,6 +12,7 @@ use serde_json;
 use serde_json::builder::*;
 use serde_json::Value;
 
+use update::Update;
 use view::View;
 
 pub struct Core {
@@ -87,6 +88,16 @@ impl Core {
         core.views.insert(view_id.clone(), view);
         core.current_view = view_id;
         core
+    }
+
+    pub fn update(&mut self, update: &Update) {
+        let mut view = self.view();
+        view.update(update);
+        self.views.insert(self.current_view.clone(), view);
+    }
+
+    pub fn view(&self) -> View {
+        self.views.clone().get(&self.current_view).unwrap().clone()
     }
 
     /// Build and send a JSON RPC request, returning the associated request ID to pair it with
