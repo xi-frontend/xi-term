@@ -156,7 +156,7 @@ impl Core {
     }
 
     pub fn new_view(&mut self, file_path: Option<String>) -> Value {
-        let mut msg: Value;
+        let msg: Value;
         if let Some(file_path) = file_path {
             msg = json!({"file_path": file_path});
         } else {
