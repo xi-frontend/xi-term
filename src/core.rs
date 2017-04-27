@@ -140,7 +140,7 @@ impl Core {
         let msg = json!({
             "method": method,
             "view_id": &self.current_view,
-            "params": params.unwrap_or(json!([])),
+            "params": params.unwrap_or_else(|| Value::Array(vec![])),
         });
         info!(">>> {:?}", msg);
         self.notify("edit", msg);
@@ -150,7 +150,7 @@ impl Core {
         let msg = json!({
             "method": method,
             "view_id": &self.current_view,
-            "params": params.unwrap_or(json!([])),
+            "params": params.unwrap_or_else(|| Value::Array(vec![])),
         });
         self.call_sync("edit", msg)
     }
