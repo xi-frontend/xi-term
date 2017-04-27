@@ -1,3 +1,4 @@
+use std;
 use std::io::stdin;
 use std::sync::mpsc;
 use std::thread;
@@ -53,7 +54,7 @@ pub fn handle(event: termion::event::Event, core: &mut Core) {
                     match c {
                         'c' => {
                             info!("received ^C: exiting");
-                            return;
+                            std::process::exit(0);
                         },
                         'w' => {
                             info!("received ^W: writing current file");
