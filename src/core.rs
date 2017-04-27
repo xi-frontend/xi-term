@@ -126,7 +126,7 @@ impl Core {
     fn send(&mut self, message: &Value) {
         let mut str_msg = serde_json::ser::to_string(&message).unwrap();
         str_msg.push('\n');
-        self.stdin.write(str_msg.as_bytes()).unwrap();
+        self.stdin.write_all(str_msg.as_bytes()).unwrap();
     }
 
     fn call_sync(&mut self, method: &str, params: Value) -> Value {
