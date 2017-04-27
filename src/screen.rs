@@ -7,7 +7,6 @@ use std::time;
 
 use termion;
 use termion::clear;
-use termion::color;
 use termion::cursor;
 use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;

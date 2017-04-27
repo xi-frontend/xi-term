@@ -18,8 +18,6 @@ mod screen;
 mod update;
 mod view;
 
-use std::env;
-
 use core::Core;
 use input::Input;
 use screen::Screen;
