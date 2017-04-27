@@ -96,7 +96,7 @@ impl Core {
     }
 
     pub fn view(&self) -> View {
-        self.views.clone().get(&self.current_view).unwrap().clone()
+        self.views.clone()[&self.current_view].clone()
     }
 
     /// Build and send a JSON RPC request, returning the associated request ID to pair it with
