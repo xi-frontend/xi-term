@@ -9,7 +9,6 @@ use std::sync::mpsc;
 use std::thread;
 
 use serde_json;
-use serde_json::builder::*;
 use serde_json::Value;
 
 use update::Update;
@@ -51,7 +50,7 @@ impl Core {
                     } else if let (Some(method), Some(params)) = (req.get("method"), req.get("params")) {
                         let meth = method.as_str().unwrap();
                         if meth == "set_style" || meth == "scroll_to" || meth == "update" {
-                            let request = ArrayBuilder::new().push(method.clone()).push(params.clone()).build();
+                            let request = json!([method.clone(), params.clone()]);
                             update_tx.send(request).unwrap();
                         } else {
                             panic!("Unknown method {:?}.", method.as_str().unwrap());
@@ -97,18 +96,18 @@ impl Core {
     }
 
     pub fn view(&self) -> View {
-        self.views.clone().get(&self.current_view).unwrap().clone()
+        self.views.clone()[&self.current_view].clone()
     }
 
     /// Build and send a JSON RPC request, returning the associated request ID to pair it with
     /// the response
     fn request(&mut self, method: &str, params: Value) -> u64 {
         self.rpc_index += 1;
-        let message = ObjectBuilder::new()
-            .insert("id", self.rpc_index)
-            .insert("method", method)
-            .insert("params", params)
-            .build();
+        let message = json!({
+            "id": self.rpc_index,
+            "method": method,
+            "params": params,
+        });
         self.send(&message);
         self.rpc_index
     }
@@ -116,10 +115,10 @@ impl Core {
     /// Build and send a JSON RPC notification. No synchronous response is expected, so
     /// there is no ID.
     fn notify(&mut self, method: &str, params: Value) {
-        let message = ObjectBuilder::new()
-            .insert("method", method)
-            .insert("params", params)
-            .build();
+        let message = json!({
+            "method": method,
+            "params": params,
+        });
         self.send(&message);
     }
 
@@ -127,7 +126,7 @@ impl Core {
     fn send(&mut self, message: &Value) {
         let mut str_msg = serde_json::ser::to_string(&message).unwrap();
         str_msg.push('\n');
-        self.stdin.write(str_msg.as_bytes()).unwrap();
+        self.stdin.write_all(str_msg.as_bytes()).unwrap();
     }
 
     fn call_sync(&mut self, method: &str, params: Value) -> Value {
@@ -138,42 +137,45 @@ impl Core {
     }
 
     fn call_edit(&mut self, method: &str, params: Option<Value>) {
-        let obj = ObjectBuilder::new()
-            .insert("method", method)
-            .insert("view_id", &self.current_view)
-            .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
-        let built_obj = obj.build();
-        info!(">>> {:?}", built_obj);
-        self.notify("edit", built_obj);
+        let msg = json!({
+            "method": method,
+            "view_id": &self.current_view,
+            "params": params.unwrap_or_else(|| Value::Array(vec![])),
+        });
+        info!(">>> {:?}", msg);
+        self.notify("edit", msg);
     }
 
     fn call_edit_sync(&mut self, method: &str, params: Option<Value>) -> Value{
-        let obj = ObjectBuilder::new()
-            .insert("method", method)
-            .insert("view_id", &self.current_view)
-            .insert("params", params.unwrap_or(ArrayBuilder::new().build()));
-        self.call_sync("edit", obj.build())
+        let msg = json!({
+            "method": method,
+            "view_id": &self.current_view,
+            "params": params.unwrap_or_else(|| Value::Array(vec![])),
+        });
+        self.call_sync("edit", msg)
     }
 
     pub fn new_view(&mut self, file_path: Option<String>) -> Value {
-        let mut obj = ObjectBuilder::new();
-        if file_path.is_some() {
-            obj = obj.insert("file_path", file_path.unwrap());
+        let msg: Value;
+        if let Some(file_path) = file_path {
+            msg = json!({"file_path": file_path});
+        } else {
+            msg = json!({});
         }
-        self.call_sync("new_view", obj.build())
+        self.call_sync("new_view", msg)
     }
 
     pub fn save(&mut self) {
         let views = self.views.clone();
-        let save_params = ObjectBuilder::new()
-            .insert("view_id", &self.current_view.clone())
-            .insert("file_path", views.get(&self.current_view).unwrap().filepath.clone())
-            .build();
+        let save_params = json!({
+            "view_id": &self.current_view.clone(),
+            "file_path": &views[&self.current_view].filepath.clone(),
+        });
         self.request("save", save_params);
     }
 
     pub fn open(&mut self, filename: &str) {
-        self.call_edit("open", Some(ObjectBuilder::new().insert("filename", filename).build()));
+        self.call_edit("open", Some(json!({"filename": filename})));
     }
 
     pub fn left(&mut self) { self.call_edit("move_left", None); }
@@ -203,18 +205,18 @@ impl Core {
     pub fn f2(&mut self) { self.call_edit("debug_test_fg_spans", None); }
 
     pub fn char(&mut self, ch: char) {
-        self.call_edit("insert", Some(ObjectBuilder::new().insert("chars", ch).build()));
+        self.call_edit("insert", Some(json!({"chars": ch})));
     }
 
     pub fn scroll(&mut self, start: u64, end: u64) {
-        self.call_edit("scroll", Some(ArrayBuilder::new().push(start).push(end).build()));
+        self.call_edit("scroll", Some(json!([start, end])));
     }
 
     pub fn click(&mut self, line: u64, column: u64) {
-        self.call_edit("click", Some(ArrayBuilder::new().push(line).push(column).push(0).push(1).build()));
+        self.call_edit("click", Some(json!([line, column, 0, 1])));
     }
     pub fn drag(&mut self, line: u64, column: u64) {
-        self.call_edit("drag", Some(ArrayBuilder::new().push(line).push(column).push(0).push(1).build()));
+        self.call_edit("drag", Some(json!([line, column, 0, 1])));
     }
 
     pub fn copy(&mut self) -> String {
@@ -224,7 +226,7 @@ impl Core {
         self.call_edit_sync("cut", None).as_str().map(|x|x.into()).unwrap()
     }
     pub fn paste(&mut self, s: String) {
-        self.call_edit("insert", Some(ObjectBuilder::new().insert("chars", s).build()));
+        self.call_edit("insert", Some(json!({"chars": s})));
     }
 
     #[allow(dead_code)]

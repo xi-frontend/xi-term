@@ -43,8 +43,8 @@ impl Input {
     }
 }
 
-pub fn handle(event: termion::event::Event, core: &mut Core) {
-    match event {
+pub fn handle(event: &termion::event::Event, core: &mut Core) {
+    match *event {
         termion::event::Event::Key(key) => {
             match key {
                 termion::event::Key::Char(c) => {

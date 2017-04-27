@@ -7,7 +7,6 @@ use std::time;
 
 use termion;
 use termion::clear;
-use termion::color;
 use termion::cursor;
 use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
@@ -35,7 +34,7 @@ impl Screen {
 
     // TODO: handle lines that are longer than terminal width.
     // Should we wrap them or truncate them?
-    pub fn redraw(&mut self, update: &Update) {
+    pub fn redraw(&mut self, _update: &Update) {
         unimplemented!();
         /*
         write!(self.stdout, "{}", termion::clear::All).unwrap();

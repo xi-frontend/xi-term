@@ -1,4 +1,5 @@
 use serde_json;
+use std::str::FromStr;
 
 use line::Line;
 
@@ -10,20 +11,23 @@ pub enum OpType {
     Ins,
 }
 
-impl OpType {
-    fn from_str(op: &str) -> OpType {
+impl FromStr for OpType {
+    // FIXME: we should have a custom error type
+    type Err = String;
+
+    fn from_str(op: &str) -> Result<Self, Self::Err> {
         if op == "copy" {
-            OpType::Cpy
+            Ok(OpType::Cpy)
         } else if op == "skip" {
-            OpType::Skip
+            Ok(OpType::Skip)
         } else if op == "invalidate" {
-            OpType::Invalidate
+            Ok(OpType::Invalidate)
         } else if op == "update" {
-            OpType::Update
+            Ok(OpType::Update)
         } else if op == "ins" {
-            OpType::Ins
+            Ok(OpType::Ins)
         } else {
-            panic!("Unknown Op type {:?}", op);
+            Err(format!("Unknown Op type {:?}", op))
         }
     }
 }
@@ -45,13 +49,13 @@ impl Op {
             _ => None,
         };
         Op {
-            op: OpType::from_str(obj.get("op").unwrap().as_str().unwrap()),
+            op: OpType::from_str(obj.get("op").unwrap().as_str().unwrap()).unwrap(),
             n: obj.get("n").unwrap().as_u64().unwrap(),
             lines: lines,
         }
     }
 
-    pub fn apply(&self, old_lines: &Vec<Line>, old_line_index: u64, new_lines: &mut Vec<Line>) -> u64 {
+    pub fn apply(&self, old_lines: &[Line], old_line_index: u64, new_lines: &mut Vec<Line>) -> u64 {
         match self.op {
             OpType::Cpy => {
                 let new_index = old_line_index + self.n;

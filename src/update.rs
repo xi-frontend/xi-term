@@ -14,7 +14,7 @@ impl Update {
         let ops = object.get("ops").unwrap().as_array().unwrap().iter().map(
             |op| Op::from_value(op)
         ).collect();
-        let rev = object.get("rev").unwrap_or(&to_value(0)).as_u64().unwrap();
+        let rev = object.get("rev").unwrap_or(&to_value(0).unwrap()).as_u64().unwrap();
         Update {
             rev: rev,
             ops: ops,

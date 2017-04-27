@@ -1,11 +1,13 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
-// #![deny(clippy_pedantic)]
+#![deny(clippy)]
+
 #[macro_use]
 extern crate clap;
 #[macro_use]
 extern crate log;
 extern crate log4rs;
+#[macro_use]
 extern crate serde_json;
 extern crate termion;
 
@@ -16,8 +18,6 @@ mod op;
 mod screen;
 mod update;
 mod view;
-
-use std::env;
 
 use core::Core;
 use input::Input;
@@ -42,7 +42,7 @@ fn main() {
 
     loop {
         if let Ok(event) = input.try_recv() {
-            input::handle(event, &mut core);
+            input::handle(&event, &mut core);
         } else {
             screen.update(&mut core);
         }
