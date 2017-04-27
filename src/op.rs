@@ -51,7 +51,7 @@ impl Op {
         }
     }
 
-    pub fn apply(&self, old_lines: &Vec<Line>, old_line_index: u64, new_lines: &mut Vec<Line>) -> u64 {
+    pub fn apply(&self, old_lines: &[Line], old_line_index: u64, new_lines: &mut Vec<Line>) -> u64 {
         match self.op {
             OpType::Cpy => {
                 let new_index = old_line_index + self.n;
