@@ -21,18 +21,16 @@ impl Input {
 
     pub fn run(&mut self) {
         let tx = self.tx.clone();
-        thread::spawn(move || {
-            for event_res in stdin().events() {
-                match event_res {
-                    Ok(event) => {
-                        tx.send(event).unwrap();
-                    }
-                    Err(err) => {
-                        error!("{:?}", err);
-                    }
-                }
+        thread::spawn(move || for event_res in stdin().events() {
+                          match event_res {
+                              Ok(event) => {
+                tx.send(event).unwrap();
             }
-        });
+                              Err(err) => {
+                error!("{:?}", err);
+            }
+                          }
+                      });
     }
 
     pub fn try_recv(&mut self) -> Result<termion::event::Event, mpsc::TryRecvError> {

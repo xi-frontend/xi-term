@@ -39,39 +39,40 @@ impl Core {
         let (update_tx, update_rx) = mpsc::channel();
         let (rpc_tx, rpc_rx) = mpsc::channel();
         let stdout = process.stdout.unwrap();
-        thread::spawn(move || {
-            for line in BufReader::new(stdout).lines() {
-                if let Ok(data) = serde_json::from_slice::<Value>(line.unwrap().as_bytes()) {
-                    let req = data.as_object().unwrap();
-                    info!("<<< {:?}", req);
-                    if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
-                        rpc_tx.send((id.as_u64().unwrap(), result.clone())).unwrap();
-                        info!(">>> {:?}", (id.as_u64().unwrap(), result.clone()));
-                    } else if let (Some(method), Some(params)) = (req.get("method"),
-                                                                  req.get("params")) {
-                        let meth = method.as_str().unwrap();
-                        if meth == "set_style" || meth == "scroll_to" || meth == "update" {
-                            let request = json!([method.clone(), params.clone()]);
-                            update_tx.send(request).unwrap();
-                        } else {
-                            panic!("Unknown method {:?}.", method.as_str().unwrap());
-                        }
+        thread::spawn(move || for line in BufReader::new(stdout).lines() {
+                          if let Ok(data) = serde_json::from_slice::<Value>(line.unwrap()
+                                                                                .as_bytes()) {
+                              let req = data.as_object().unwrap();
+                              info!("<<< {:?}", req);
+                              if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
+                                  rpc_tx
+                                      .send((id.as_u64().unwrap(), result.clone()))
+                                      .unwrap();
+                                  info!(">>> {:?}", (id.as_u64().unwrap(), result.clone()));
+                              } else if let (Some(method), Some(params)) =
+                    (req.get("method"), req.get("params")) {
+                    let meth = method.as_str().unwrap();
+                    if meth == "set_style" || meth == "scroll_to" || meth == "update" {
+                        let request = json!([method.clone(), params.clone()]);
+                        update_tx.send(request).unwrap();
                     } else {
-                        panic!("Could not parse the core output: {:?}", req);
+                        panic!("Unknown method {:?}.", method.as_str().unwrap());
                     }
+                } else {
+                    panic!("Could not parse the core output: {:?}", req);
                 }
-            }
-        });
+                          }
+                      });
 
         let stderr = process.stderr.unwrap();
         thread::spawn(move || {
-            let buf_reader = BufReader::new(stderr);
-            for line in buf_reader.lines() {
-                if let Ok(line) = line {
-                    error!("[core] {}", line);
-                }
-            }
-        });
+                          let buf_reader = BufReader::new(stderr);
+                          for line in buf_reader.lines() {
+                              if let Ok(line) = line {
+                                  error!("[core] {}", line);
+                              }
+                          }
+                      });
 
         let stdin = process.stdin.unwrap();
 
@@ -83,7 +84,10 @@ impl Core {
             current_view: "".into(),
             views: HashMap::new(),
         };
-        let view_id = core.new_view(Some(file.to_string())).as_str().unwrap().to_string();
+        let view_id = core.new_view(Some(file.to_string()))
+            .as_str()
+            .unwrap()
+            .to_string();
         let view = View::new(file.to_string());
         core.views.insert(view_id.clone(), view);
         core.current_view = view_id;
@@ -253,10 +257,16 @@ impl Core {
     }
 
     pub fn copy(&mut self) -> String {
-        self.call_edit_sync("copy", None).as_str().map(|x| x.into()).unwrap()
+        self.call_edit_sync("copy", None)
+            .as_str()
+            .map(|x| x.into())
+            .unwrap()
     }
     pub fn cut(&mut self) -> String {
-        self.call_edit_sync("cut", None).as_str().map(|x| x.into()).unwrap()
+        self.call_edit_sync("cut", None)
+            .as_str()
+            .map(|x| x.into())
+            .unwrap()
     }
     pub fn paste(&mut self, s: String) {
         self.call_edit("insert", Some(json!({"chars": s})));
