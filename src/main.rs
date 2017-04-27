@@ -43,7 +43,7 @@ fn main() {
 
     loop {
         if let Ok(event) = input.try_recv() {
-            input::handle(event, &mut core);
+            input::handle(&event, &mut core);
         } else {
             screen.update(&mut core);
         }

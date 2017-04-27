@@ -43,9 +43,9 @@ impl Input {
     }
 }
 
-pub fn handle(event: termion::event::Event, core: &mut Core) {
+pub fn handle(event: &termion::event::Event, core: &mut Core) {
     match event {
-        termion::event::Event::Key(key) => {
+        &termion::event::Event::Key(key) => {
             match key {
                 termion::event::Key::Char(c) => {
                     core.char(c);
@@ -89,7 +89,7 @@ pub fn handle(event: termion::event::Event, core: &mut Core) {
                 }
             }
         },
-        termion::event::Event::Mouse(e) => {
+        &termion::event::Event::Mouse(e) => {
             match e {
                 termion::event::MouseEvent::Press(_, y, x) => {
                     core.click(x as u64 - 1, y as u64 - 1);
