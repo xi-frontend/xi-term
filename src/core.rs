@@ -169,7 +169,7 @@ impl Core {
         let views = self.views.clone();
         let save_params = json!({
             "view_id": &self.current_view.clone(),
-            "file_path": views.get(&self.current_view).unwrap().filepath.clone(),
+            "file_path": &views[&self.current_view].filepath.clone(),
         });
         self.request("save", save_params);
     }
