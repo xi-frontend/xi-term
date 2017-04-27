@@ -1,6 +1,7 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
-// #![deny(clippy_pedantic)]
+#![deny(clippy)]
+
 #[macro_use]
 extern crate clap;
 #[macro_use]
