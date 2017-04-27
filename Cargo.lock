@@ -3,7 +3,6 @@ name = "xi-tui"
 version = "0.1.0"
 dependencies = [
  "clap 2.19.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "clipboard 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.99 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -28,11 +27,6 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "block"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "chrono"
 version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -54,29 +48,6 @@ dependencies = [
  "unicode-segmentation 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "vec_map 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "clipboard"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "clipboard-win 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "objc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "objc-foundation 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "objc_id 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x11 2.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "clipboard-win"
-version = "1.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "user32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "windows-error 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -175,14 +146,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "malloc_buf"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "matches"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -225,32 +188,6 @@ version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "objc"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "malloc_buf 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "objc-foundation"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "block 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "objc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "objc_id 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "objc_id"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "objc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "ordered-float"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -268,11 +205,6 @@ dependencies = [
  "smallvec 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "pkg-config"
-version = "0.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "post-expansion"
@@ -527,15 +459,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "user32-sys"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "vec_map"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -551,24 +474,6 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "windows-error"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "x11"
-version = "2.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "pkg-config 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "yaml-rust"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -577,11 +482,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum ansi_term 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "23ac7c30002a5accbf7e8987d0632fa6de155b7c3d39d0067317a391e00a2ef6"
 "checksum antidote 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "34fde25430d87a9388dadbe6e34d7f72a462c8b43ac8d309b42b0a8505d7e2a5"
 "checksum bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
-"checksum block 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 "checksum chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9213f7cd7c27e95c2b57c49f0e69b1ea65b27138da84a170133fd21b07659c00"
 "checksum clap 2.19.3 (registry+https://github.com/rust-lang/crates.io-index)" = "95b78f3fe0fc94c13c731714363260e04b557a637166f33a4570d3189d642374"
-"checksum clipboard 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "811169a9ffda99ed1841a6db3c48cffbab9a9101376f77fee3c14a7581ab933d"
-"checksum clipboard-win 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f05017278a9e5485eacce962c9efc52f720eef0d19646dc3a7af714aad22ed2c"
 "checksum clippy 0.0.99 (registry+https://github.com/rust-lang/crates.io-index)" = "ae61f7cb9ce00ecf777ced86d6419458af62d99bc6f66f1259f0f9448c5e7824"
 "checksum clippy_lints 0.0.99 (registry+https://github.com/rust-lang/crates.io-index)" = "26f1bef40edc0f47d7234ce66f833a472c8cda9ca3627a3115323120d55ab322"
 "checksum crossbeam 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0c5ea215664ca264da8a9d9c3be80d2eaf30923c259d03e870388eb927508f97"
@@ -593,19 +495,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)" = "044d1360593a78f5c8e5e710beccdc24ab71d1f01bc19a29bcacdba22e8475d8"
 "checksum log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ab83497bf8bf4ed2a74259c1c802351fcd67a65baa86394b6ba73c36f4838054"
 "checksum log4rs 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)" = "6a7074be77422e232a2f02470bdab3331187110f54f7e9c05d84741671e0583a"
-"checksum malloc_buf 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 "checksum matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "efd7622e3022e1a6eaa602c4cea8912254e5582c9c692e9167714182244801b1"
 "checksum nom 1.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "a5b8c256fd9471521bcb84c3cdba98921497f1a331cbc15b8030fc63b82050ce"
 "checksum num 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "bde7c03b09e7c6a301ee81f6ddf66d7a28ec305699e3d3b056d2fc56470e3120"
 "checksum num-integer 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)" = "fb24d9bfb3f222010df27995441ded1e954f8f69cd35021f6bef02ca9552fb92"
 "checksum num-iter 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)" = "287a1c9969a847055e1122ec0ea7a5c5d6f72aad97934e131c83d5c08ab4e45c"
 "checksum num-traits 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "a16a42856a256b39c6d3484f097f6713e14feacd9bfb02290917904fae46c81c"
-"checksum objc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "877f30f37acef6749b1841cceab289707f211aecfc756553cd63976190e6cc2e"
-"checksum objc-foundation 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1add1b659e36c9607c7aab864a76c7a4c2760cd0cd2e120f3fb8b952c7e22bf9"
-"checksum objc_id 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e4730aa1c64d722db45f7ccc4113a3e2c465d018de6db4d3e7dfe031e8c8a297"
 "checksum ordered-float 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4d961410be0435ccb80048a6516d95a4b91becde403a957d162f3fba4943b7e3"
 "checksum parking_lot 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "968f685642555d2f7e202c48b8b11de80569e9bfea817f7f12d7c61aac62d4e6"
-"checksum pkg-config 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "8cee804ecc7eaf201a4a207241472cc870e825206f6c031e3ee2a72fa425f2fa"
 "checksum post-expansion 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "31a834a6060acaef74a8d878f6ca37a2b86fefe042bbfe70689ba587e42526f9"
 "checksum quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0aad603e8d7fb67da22dbdf1f4b826ce8829e406124109e73cf1b2454b93a71c"
 "checksum quine-mc_cluskey 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "07589615d719a60c8dd8a4622e7946465dfef20d1a428f969e3443e7386d5f45"
@@ -639,10 +536,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum unicode-width 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "bf3a113775714a22dcb774d8ea3655c53a32debae63a063acc00a91cc586245f"
 "checksum unicode-xid 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "36dff09cafb4ec7c8cf0023eb0b686cb6ce65499116a12201c9e11840ca01beb"
 "checksum unsafe-any 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b351086021ebc264aea3ab4f94d61d889d98e5e9ec2d985d993f50133537fd3a"
-"checksum user32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4ef4711d107b21b410a3a974b1204d9accc8b10dad75d8324b5d755de1617d47"
 "checksum vec_map 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cac5efe5cb0fa14ec2f84f83c701c562ee63f6dcc680861b21d65c682adfb05f"
 "checksum winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"
 "checksum winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"
-"checksum windows-error 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4b6f041a47be7706a341bc283f83d347d2a9b175b1578cf304fa35b121551145"
-"checksum x11 2.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "be719a282c8d2debd87999849347346259c58ff0acdac3f7f3b48b58652dd773"
 "checksum yaml-rust 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "371cea3a33a58d11dc83c0992fb37e44f651ebdf2df12f9d939f6cb24be2a8fd"
