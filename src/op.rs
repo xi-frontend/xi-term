@@ -65,10 +65,8 @@ impl Op {
             },
             OpType::Invalidate => {
                 let new_index = old_line_index + self.n;
-                for i in old_line_index..new_index {
-                    let mut line = old_lines[i as usize].clone();
-                    line.cursor = Some(vec![]);
-                    new_lines.push(line);
+                for _ in 0..self.n {
+                    new_lines.push(Line::invalid());
                 }
                 new_index
             },

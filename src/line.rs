@@ -32,4 +32,12 @@ impl Line {
             styles: styles,
         }
     }
+
+    pub fn invalid() -> Line {
+        Line {
+            text: Some("".into()),
+            cursor: None,
+            styles: None,
+        }
+    }
 }
