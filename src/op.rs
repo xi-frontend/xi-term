@@ -45,7 +45,7 @@ impl Op {
             Some(line_value) => {
                 let line_list = line_value.as_array().unwrap();
                 Some(line_list.iter().map(|line| Line::from_value(line)).collect())
-            },
+            }
             _ => None,
         };
         Op {
@@ -63,17 +63,15 @@ impl Op {
                     new_lines.push(old_lines[i as usize].clone());
                 }
                 new_index
-            },
-            OpType::Skip => {
-                old_line_index + self.n
-            },
+            }
+            OpType::Skip => old_line_index + self.n,
             OpType::Invalidate => {
                 let new_index = old_line_index + self.n;
                 for _ in 0..self.n {
                     new_lines.push(Line::invalid());
                 }
                 new_index
-            },
+            }
             OpType::Update => {
                 let new_index = old_line_index + self.n;
                 let lines = self.lines.clone().unwrap();
@@ -84,12 +82,12 @@ impl Op {
                     new_lines.push(line);
                 }
                 new_index
-            },
+            }
             OpType::Ins => {
                 let lines = self.lines.clone().unwrap();
                 new_lines.extend(lines.iter().cloned());
                 old_line_index + self.n
-            },
+            }
         }
     }
 }

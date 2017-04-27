@@ -17,13 +17,13 @@ impl Line {
         let cursor = match obj.get("cursor") {
             Some(cursor) => {
                 Some(cursor.as_array().unwrap().iter().map(|c| c.as_u64().unwrap()).collect())
-            },
+            }
             _ => None,
         };
         let styles = match obj.get("styles") {
             Some(styles) => {
                 Some(styles.as_array().unwrap().iter().map(|s| s.as_i64().unwrap()).collect())
-            },
+            }
             _ => None,
         };
         Line {
