@@ -5,7 +5,7 @@ use update::Update;
 pub struct View {
     last_rev: u64,
     pub filepath: String,
-    lines: Vec<Line>,
+    pub lines: Vec<Line>,
 }
 
 impl View {
