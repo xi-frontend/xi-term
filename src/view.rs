@@ -24,7 +24,7 @@ impl View {
         let mut lines = vec![];
         let mut index = 0;
 
-        for op in update.ops.iter() {
+        for op in &update.ops {
             index = op.apply(&self.lines, index, &mut lines);
         }
 
