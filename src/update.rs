@@ -1,27 +1,23 @@
 use serde_json;
+use serde_json::value::to_value;
 
-use line::Line;
+use op::Op;
 
 pub struct Update {
-    pub lines: Vec<Line>,
-    height: u64,
-    pub scroll_to: (u64, u64),
-    pub first_line: u64
+    pub rev: u64,
+    pub ops: Vec<Op>,
 }
 
 impl Update {
     pub fn from_value(value: &serde_json::Value) -> Update {
         let object = value.as_object().unwrap();
-        let scroll_to = object.get("scrollto").unwrap().as_array().unwrap();
-        let mut lines: Vec<Line> = vec![];
-        for line in object.get("lines").unwrap().as_array().unwrap().iter() {
-            lines.push(Line::from_value(line));
-        }
+        let ops = object.get("ops").unwrap().as_array().unwrap().iter().map(
+            |op| Op::from_value(op)
+        ).collect();
+        let rev = object.get("rev").unwrap_or(&to_value(0)).as_u64().unwrap();
         Update {
-            height: object.get("height").unwrap().as_u64().unwrap(),
-            first_line: object.get("first_line").unwrap().as_u64().unwrap(),
-            lines: lines,
-            scroll_to: (scroll_to[0].as_u64().unwrap(), scroll_to[1].as_u64().unwrap()),
+            rev: rev,
+            ops: ops,
         }
     }
 }

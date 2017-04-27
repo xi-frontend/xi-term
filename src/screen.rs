@@ -15,6 +15,7 @@ use termion::raw::RawTerminal;
 
 use core::Core;
 use update::Update;
+use view::View;
 
 pub struct Screen {
     pub stdout: MouseTerminal<RawTerminal<std::io::Stdout>>,
@@ -35,6 +36,8 @@ impl Screen {
     // TODO: handle lines that are longer than terminal width.
     // Should we wrap them or truncate them?
     pub fn redraw(&mut self, update: &Update) {
+        unimplemented!();
+        /*
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
 
@@ -93,7 +96,23 @@ impl Screen {
                 cols += 1;
             }
         }
-        write!(self.stdout, "{}", cursor::Goto(cols as u16 + 1, cursor_line_idx as u16 + 1)).unwrap();
+        self.scroll(cols + 1, cursor_line_idx + 1);
+        */
+    }
+
+    pub fn draw(&mut self, view: &View) {
+        write!(self.stdout, "{}", termion::clear::All).unwrap();
+        write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
+
+        let range = 0..(cmp::min(view.lines.len(), self.size.1 as usize));
+        for (lineno, line) in range.zip(view.lines.iter()) {
+            write!(self.stdout, "{}", line.text.clone().unwrap()).unwrap();
+            self.scroll(0, lineno as u64);
+        }
+    }
+
+    pub fn scroll(&mut self, col: u64, line: u64) {
+        write!(self.stdout, "{}", cursor::Goto((col + 1) as u16, (line + 1) as u16)).unwrap();
         self.stdout.flush().unwrap();
     }
 
@@ -107,8 +126,22 @@ impl Screen {
         // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
         // and a `scroll` command for future updates.
         if let Ok(msg) = core.update_rx.try_recv() {
-            let update = Update::from_value(msg.as_object().unwrap().get("update").unwrap());
-            self.redraw(&update);
+            let msg_list = msg.as_array().unwrap();
+            let (method, params) = (msg_list[0].as_str().unwrap(), msg_list[1].as_object().unwrap());
+            if method == "update" {
+                let update = Update::from_value(params.get("update").unwrap());
+                core.update(&update);
+
+                let view = core.view();
+                self.draw(&view);
+            } else if method == "scroll_to" {
+                let (col, line) = (params.get("col").unwrap().as_u64().unwrap(), params.get("line").unwrap().as_u64().unwrap());
+                self.scroll(col, line);
+            } else if method == "set_style" {
+                // TODO: ???
+            } else {
+                info!("Unknown request from backend {:?}", method);
+            }
         } else {
             thread::sleep(time::Duration::from_millis(10));
         }
