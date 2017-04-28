@@ -28,10 +28,12 @@ impl Screen {
         let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", clear::All).unwrap();
         stdout.flush().unwrap();
-        Screen {
+        let mut screen = Screen {
             size: termion::terminal_size().unwrap(),
             stdout: stdout,
-        }
+        };
+        screen.init();
+        screen
     }
 
     // TODO: handle lines that are longer than terminal width.
@@ -120,37 +122,5 @@ impl Screen {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
         self.stdout.flush().unwrap();
-    }
-
-    pub fn update(&mut self, core: &mut Core) {
-        // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
-        // and a `scroll` command for future updates.
-        if let Ok(msg) = core.update_rx.try_recv() {
-            let msg_list = msg.as_array().unwrap();
-            let (method, params) = (msg_list[0].as_str().unwrap(),
-                                    msg_list[1].as_object().unwrap());
-            match method {
-                "update" => {
-                    let update = serde_json::from_value(params.get("update").unwrap().clone()).unwrap();
-                    core.update(&update);
-
-                    let view = core.view();
-                    self.draw(&view);
-                }
-                "scroll_to" => {
-                    let (col, line) = (params.get("col").unwrap().as_u64().unwrap(),
-                    params.get("line").unwrap().as_u64().unwrap());
-                    self.scroll(col, line);
-                }
-                "set_style" => {
-                    // TODO: ???
-                }
-                _ => {
-                    info!("Unknown request from backend {:?}", method);
-                }
-            }
-        } else {
-            thread::sleep(time::Duration::from_millis(10));
-        }
     }
 }
