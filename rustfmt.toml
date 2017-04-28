@@ -1,4 +1,9 @@
+max_width = 100
+
 chain_indent = "visual"
+
+wrap_comments = true
+comment_width = 100
 
 report_todo = "Unnumbered"
 report_fixme = "Unnumbered"
