@@ -55,8 +55,8 @@ impl Screen {
     }
 
     pub fn update(&mut self, core: &mut Core) {
-        // TODO(#27): check if terminal size changed. If so, send a `render_line` command to the backend,
-        // and a `scroll` command for future updates.
+        // TODO(#27): check if terminal size changed. If so, send a `render_line` command to the
+        // backend, and a `scroll` command for future updates.
         if let Ok(msg) = core.update_rx.try_recv() {
             let msg_list = msg.as_array().unwrap();
             let (method, params) = (msg_list[0].as_str().unwrap(),
