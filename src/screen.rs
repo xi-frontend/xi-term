@@ -55,7 +55,7 @@ impl Screen {
     }
 
     pub fn update(&mut self, core: &mut Core) {
-        // TODO: check if terminal size changed. If so, send a `render_line` command to the backend,
+        // TODO(#27): check if terminal size changed. If so, send a `render_line` command to the backend,
         // and a `scroll` command for future updates.
         if let Ok(msg) = core.update_rx.try_recv() {
             let msg_list = msg.as_array().unwrap();
@@ -72,7 +72,7 @@ impl Screen {
                                    params.get("line").unwrap().as_u64().unwrap());
                 self.scroll(col, line);
             } else if method == "set_style" {
-                // TODO: ???
+                // TODO(#26): ???
             } else {
                 info!("Unknown request from backend {:?}", method);
             }

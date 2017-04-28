@@ -12,7 +12,7 @@ pub enum OpType {
 }
 
 impl FromStr for OpType {
-    // FIXME: we should have a custom error type
+    // FIXME(#28): we should have a custom error type
     type Err = String;
 
     fn from_str(op: &str) -> Result<Self, Self::Err> {
