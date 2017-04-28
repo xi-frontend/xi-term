@@ -11,6 +11,8 @@ install --force` to replace the existing installation.
 
 # xi-tui
 
+[![Build Status](https://travis-ci.org/little-dude/xi-tui.svg?branch=master)](https://travis-ci.org/little-dude/xi-tui)
+
 `xi-tui` is a TUI frontend for [xi](https://github.com/google/xi-editor/).
 
 ## Current goals
