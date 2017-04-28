@@ -1,6 +1,5 @@
 use serde;
 use serde_json as json;
-use serde_derive;
 use line::Line;
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -124,4 +123,3 @@ fn deserialize_operation() {
     let deserialized: Result<Operation, _> = serde_json::from_str(s);
     assert_eq!(deserialized.unwrap(), operation);
 }
-

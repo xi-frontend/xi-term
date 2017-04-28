@@ -1,5 +1,3 @@
-use serde;
-use serde_derive;
 use operation::Operation;
 
 #[derive(Deserialize, Debug, PartialEq)]

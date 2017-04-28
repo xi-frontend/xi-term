@@ -26,10 +26,11 @@ mod operation;
 mod screen;
 mod view;
 
-use std::io::{BufReader};
-use xi_rpc::{Handler, RpcLoop, RpcPeer, RpcCtx};
-use std::process::{Stdio,Command,ChildStdin,ChildStdout};
+use std::io::BufReader;
+use xi_rpc::RpcLoop;
+use std::process::{Stdio, Command};
 use core::Core;
+
 fn main() {
     log4rs::init_file("log_config.yaml", Default::default()).unwrap();
 
@@ -49,7 +50,7 @@ fn main() {
         .stdin(Stdio::piped())
         .env("RUST_BACKTRACE", "1")
         .spawn()
-        .unwrap_or_else(|e| { panic!("failed to execute core: {}", e) });
+        .unwrap_or_else(|e| panic!("failed to execute core: {}", e));
 
     let stdin = process.stdin.unwrap();
     let mut rpc_loop = RpcLoop::new(stdin);

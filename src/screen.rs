@@ -2,8 +2,6 @@ use std;
 use std::cmp;
 use std::io::stdout;
 use std::io::Write;
-use std::thread;
-use std::time;
 
 use termion;
 use termion::clear;
@@ -12,9 +10,6 @@ use termion::input::MouseTerminal;
 use termion::raw::IntoRawMode;
 use termion::raw::RawTerminal;
 
-use serde_json;
-
-use core::Core;
 use update::Update;
 use view::View;
 
