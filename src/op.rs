@@ -44,10 +44,9 @@ impl Op {
         let lines = match obj.get("lines") {
             Some(line_value) => {
                 let line_list = line_value.as_array().unwrap();
-                Some(line_list
-                         .iter()
-                         .map(|line| Line::from_value(line))
-                         .collect())
+                Some(line_list.iter()
+                              .map(|line| Line::from_value(line))
+                              .collect())
             }
             _ => None,
         };
