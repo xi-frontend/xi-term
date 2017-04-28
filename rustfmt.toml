@@ -9,3 +9,5 @@ report_todo = "Unnumbered"
 report_fixme = "Unnumbered"
 
 write_mode = "diff"
+
+condense_wildcard_suffices = true
