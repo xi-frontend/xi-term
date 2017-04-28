@@ -11,6 +11,8 @@ yaml_format = []
 clippy = {version = "*", optional = true}
 termion = "*"
 jsonrpc-core = "*"
+serde = "*"
+serde_derive = "*"
 serde_json = "*"
 log = "0.3"
 clap = "2.0"

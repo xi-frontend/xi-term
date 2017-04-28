@@ -1,29 +1,41 @@
-use serde_json;
-use serde_json::value::to_value;
+use serde;
+use serde_derive;
+use operation::Operation;
 
-use op::Op;
-
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct Update {
-    pub rev: u64,
-    pub ops: Vec<Op>,
+    pub rev: Option<u64>,
+    #[serde(rename="ops")]
+    pub operations: Vec<Operation>,
+    pub pristine: bool,
+    #[serde(rename="view-id")]
+    pub view_id: String,
 }
 
-impl Update {
-    pub fn from_value(value: &serde_json::Value) -> Update {
-        let object = value.as_object().unwrap();
-        let ops = object
-            .get("ops")
-            .unwrap()
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|op| Op::from_value(op))
-            .collect();
-        let rev = object
-            .get("rev")
-            .unwrap_or(&to_value(0).unwrap())
-            .as_u64()
-            .unwrap();
-        Update { rev: rev, ops: ops }
-    }
+
+#[test]
+fn deserialize_update() {
+    use serde_json;
+    let s = r#"{"ops":[{"n":60,"op":"invalidate"},{"lines":[{"cursor":[0],"styles":[],"text":"Bar"},{"styles":[],"text":"Foo"}],"n":12,"op":"ins"}],"pristine":true,"view-id":"my-view"}"#;
+    let update = Update {
+        operations: vec![
+            Operation {
+                operation_type: OperationType::Invalidate,
+                nb_lines: 60,
+                lines: None,
+            },
+            Operation {
+                operation_type: OperationType::Insert,
+                nb_lines: 12,
+                lines: Some(
+                    vec![
+                    Line { cursor: Some(vec![0]), styles: Some(vec![]), text: Some("Bar".to_owned()) },
+                    Line { cursor: None, styles: Some(vec![]), text: Some("Foo".to_owned()) }]),
+            }],
+            pristine: true,
+            rev: None,
+            view_id: "my-view".to_owned(),
+    };
+    let deserialized: Result<Update, _> = serde_json::from_str(s);
+    assert_eq!(deserialized.unwrap(), update);
 }
