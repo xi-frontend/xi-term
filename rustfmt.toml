@@ -1,0 +1,6 @@
+chain_indent = "visual"
+
+report_todo = "Unnumbered"
+report_fixme = "Unnumbered"
+
+write_mode = "diff"
