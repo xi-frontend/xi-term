@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use line::Line;
 
+#[derive(Debug, PartialEq)]
 pub enum OpType {
     Cpy,
     Skip,
@@ -91,5 +92,28 @@ impl Op {
                 old_line_index + self.n
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod op_type_tests {
+    use super::*;
+
+    #[test]
+    fn test_can_parse() {
+        let valid_ops = vec!["copy", "skip", "invalidate", "update", "ins"];
+        let expected_op_types =
+            vec![OpType::Cpy, OpType::Skip, OpType::Invalidate, OpType::Update, OpType::Ins];
+        let iter = valid_ops.iter().zip(expected_op_types.iter());
+        for (op_type_str, expected) in iter {
+            let actual = OpType::from_str(op_type_str);
+            assert!(actual.is_ok());
+            assert_eq!(expected, &actual.unwrap());
+        }
+    }
+
+    #[test]
+    fn test_cannot_parse_bad_op() {
+        assert!(OpType::from_str("what is this").is_err());
     }
 }
