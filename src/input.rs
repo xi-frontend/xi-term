@@ -1,7 +1,7 @@
-use std;
 use std::io::stdin;
 use std::sync::mpsc;
 use std::thread;
+use std::process;
 
 use termion;
 use termion::input::TermRead;
@@ -16,21 +16,24 @@ pub struct Input {
 impl Input {
     pub fn new() -> Input {
         let (tx, rx) = mpsc::channel();
-        Input { tx: tx, rx: rx }
+        let mut input = Input { tx: tx, rx: rx };
+        input.run();
+        input
     }
 
     pub fn run(&mut self) {
         let tx = self.tx.clone();
         thread::spawn(move || for event_res in stdin().events() {
-                          match event_res {
-                              Ok(event) => {
-                tx.send(event).unwrap();
+            match event_res {
+                Ok(event) => {
+                    info!("input event {:?}", event);
+                    tx.send(event).unwrap();
+                }
+                Err(err) => {
+                    error!("{:?}", err);
+                }
             }
-                              Err(err) => {
-                error!("{:?}", err);
-            }
-                          }
-                      });
+        });
     }
 
     pub fn try_recv(&mut self) -> Result<termion::event::Event, mpsc::TryRecvError> {
@@ -43,35 +46,35 @@ pub fn handle(event: &termion::event::Event, core: &mut Core) {
         termion::event::Event::Key(key) => {
             match key {
                 termion::event::Key::Char(c) => {
-                    core.char(c);
+                    core.insert(c.to_string().as_str());
                 }
                 termion::event::Key::Ctrl(c) => {
                     match c {
                         'c' => {
                             info!("received ^C: exiting");
-                            std::process::exit(0);
+                            process::exit(0);
                         }
                         'w' => {
                             info!("received ^W: writing current file");
-                            core.save();
+                            core.save("dummy");
                         }
                         _ => {}
                     }
                 }
                 termion::event::Key::Backspace => {
-                    core.del();
+                    core.delete_backward();
                 }
                 termion::event::Key::Left => {
-                    core.left();
+                    core.move_left();
                 }
                 termion::event::Key::Right => {
-                    core.right();
+                    core.move_right();
                 }
                 termion::event::Key::Up => {
-                    core.up();
+                    core.move_up();
                 }
                 termion::event::Key::Down => {
-                    core.down();
+                    core.move_down();
                 }
                 termion::event::Key::PageUp => {
                     core.page_up();
