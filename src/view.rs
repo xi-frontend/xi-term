@@ -1,5 +1,6 @@
 use line::Line;
 use update::Update;
+use errors::*;
 
 #[derive(Clone)]
 pub struct View {
@@ -9,15 +10,15 @@ pub struct View {
 }
 
 impl View {
-    pub fn new(filepath: String) -> View {
+    pub fn new(filepath: &str) -> View {
         View {
             last_rev: 0,
-            filepath: filepath,
+            filepath: filepath.to_owned(),
             lines: vec![],
         }
     }
 
-    pub fn update(&mut self, update: &Update) {
+    pub fn update(&mut self, update: &Update) -> Result<()> {
         // if self.last_rev > update.rev {
         //     return;
         // }
@@ -26,10 +27,11 @@ impl View {
         let mut index = 0;
 
         for operation in &update.operations {
-            index = operation.apply(&self.lines, index, &mut lines);
+            index = operation.apply(&self.lines, index, &mut lines)?;
         }
 
         // self.last_rev = update.rev;
         self.lines = lines;
+        Ok(())
     }
 }
