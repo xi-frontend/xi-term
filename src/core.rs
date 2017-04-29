@@ -45,9 +45,8 @@ impl Core {
                               let req = data.as_object().unwrap();
                               info!("<<< {:?}", req);
                               if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
-                                  rpc_tx
-                                      .send((id.as_u64().unwrap(), result.clone()))
-                                      .unwrap();
+                                  rpc_tx.send((id.as_u64().unwrap(), result.clone()))
+                                        .unwrap();
                                   info!(">>> {:?}", (id.as_u64().unwrap(), result.clone()));
                               } else if let (Some(method), Some(params)) =
                     (req.get("method"), req.get("params")) {
@@ -85,9 +84,9 @@ impl Core {
             views: HashMap::new(),
         };
         let view_id = core.new_view(Some(file.to_string()))
-            .as_str()
-            .unwrap()
-            .to_string();
+                          .as_str()
+                          .unwrap()
+                          .to_string();
         let view = View::new(file.to_string());
         core.views.insert(view_id.clone(), view);
         core.current_view = view_id;

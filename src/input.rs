@@ -89,7 +89,7 @@ pub fn handle(event: &termion::event::Event, core: &mut Core) {
                 termion::event::MouseEvent::Press(_, y, x) => {
                     core.click(x as u64 - 1, y as u64 - 1);
                 }
-                termion::event::MouseEvent::Release(_, _) => {}
+                termion::event::MouseEvent::Release(..) => {}
                 termion::event::MouseEvent::Hold(y, x) => {
                     core.drag(x as u64 - 1, y as u64 - 1);
                 }
