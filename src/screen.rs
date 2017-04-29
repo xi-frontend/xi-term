@@ -9,6 +9,7 @@ use termion;
 use termion::clear;
 use termion::cursor;
 use termion::input::MouseTerminal;
+use termion::screen::AlternateScreen;
 use termion::raw::IntoRawMode;
 use termion::raw::RawTerminal;
 
@@ -18,15 +19,13 @@ use core::Core;
 use view::View;
 
 pub struct Screen {
-    pub stdout: MouseTerminal<RawTerminal<std::io::Stdout>>,
+    pub stdout: MouseTerminal<AlternateScreen<RawTerminal<std::io::Stdout>>>,
     pub size: (u16, u16),
 }
 
 impl Screen {
     pub fn new() -> Screen {
-        let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
-        write!(stdout, "{}", clear::All).unwrap();
-        stdout.flush().unwrap();
+        let stdout = MouseTerminal::from(AlternateScreen::from(stdout().into_raw_mode().unwrap()));
         Screen {
             size: termion::terminal_size().unwrap(),
             stdout: stdout,
@@ -50,7 +49,7 @@ impl Screen {
     }
 
     pub fn init(&mut self) {
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
+        write!(self.stdout, "{}", clear::All).unwrap();
         write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
         self.stdout.flush().unwrap();
     }
