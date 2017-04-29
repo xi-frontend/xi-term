@@ -1,4 +1,6 @@
 use serde_json;
+use std::fmt;
+use std::error::Error;
 use std::str::FromStr;
 
 use line::Line;
@@ -11,9 +13,25 @@ pub enum OpType {
     Ins,
 }
 
+#[derive(Debug)]
+pub struct OpTypeParseError {
+    op: String,
+}
+
+impl fmt::Display for OpTypeParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Unknown Op type {:?}", self.op)
+    }
+}
+
+impl Error for OpTypeParseError {
+    fn description(&self) -> &str { "OpTypeParseError" }
+
+    fn cause(&self) -> Option<&Error> { None }
+}
+
 impl FromStr for OpType {
-    // FIXME(#28): we should have a custom error type
-    type Err = String;
+    type Err = OpTypeParseError;
 
     fn from_str(op: &str) -> Result<Self, Self::Err> {
         if op == "copy" {
@@ -27,7 +45,7 @@ impl FromStr for OpType {
         } else if op == "ins" {
             Ok(OpType::Ins)
         } else {
-            Err(format!("Unknown Op type {:?}", op))
+            Err(OpTypeParseError{op: op.into()})
         }
     }
 }
