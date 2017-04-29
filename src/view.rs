@@ -21,11 +21,12 @@ impl View {
         if self.last_rev > update.rev {
             return;
         }
+
         let mut lines = vec![];
         let mut index = 0;
 
-        for op in &update.ops {
-            index = op.apply(&self.lines, index, &mut lines);
+        for operation in &update.operations {
+            index = operation.apply(&self.lines, index, &mut lines);
         }
 
         self.last_rev = update.rev;

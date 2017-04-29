@@ -12,6 +12,8 @@ clippy = {version = "*", optional = true}
 termion = "*"
 jsonrpc-core = "*"
 serde_json = "*"
+serde = "*"
+serde_derive = "*"
 log = "0.3"
 clap = "2.0"
 

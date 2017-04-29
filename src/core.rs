@@ -24,6 +24,7 @@ pub struct Core {
 }
 
 impl Core {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn new(executable: &str, file: &str) -> Core {
         // spawn the core process
         let process = Command::new(executable)
@@ -38,40 +39,50 @@ impl Core {
 
         let (update_tx, update_rx) = mpsc::channel();
         let (rpc_tx, rpc_rx) = mpsc::channel();
+
         let stdout = process.stdout.unwrap();
+
         thread::spawn(move || for line in BufReader::new(stdout).lines() {
-                          if let Ok(data) = serde_json::from_slice::<Value>(line.unwrap()
-                                                                                .as_bytes()) {
-                              let req = data.as_object().unwrap();
-                              info!("<<< {:?}", req);
-                              if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
-                                  rpc_tx.send((id.as_u64().unwrap(), result.clone()))
-                                        .unwrap();
-                                  info!(">>> {:?}", (id.as_u64().unwrap(), result.clone()));
-                              } else if let (Some(method), Some(params)) =
-                    (req.get("method"), req.get("params")) {
-                    let meth = method.as_str().unwrap();
-                    if meth == "set_style" || meth == "scroll_to" || meth == "update" {
-                        let request = json!([method.clone(), params.clone()]);
-                        update_tx.send(request).unwrap();
-                    } else {
-                        panic!("Unknown method {:?}.", method.as_str().unwrap());
-                    }
-                } else {
-                    panic!("Could not parse the core output: {:?}", req);
+            let line = line.unwrap();
+            info!("<<< {}", line);
+
+            if let Ok(data) = serde_json::from_slice::<Value>(line.as_bytes()) {
+                let req = data.as_object().unwrap();
+
+                if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
+                    rpc_tx.send((id.as_u64().unwrap(), result.clone())).unwrap();
+                    continue;
                 }
-                          }
-                      });
+
+                if let (Some(method), Some(params)) = (req.get("method"), req.get("params")) {
+                    match method.as_str().unwrap() {
+                        "set_style" | "scroll_to" | "update" => {
+                            update_tx.send(json!([method, &params])).unwrap();
+                        }
+                        _ => {
+                            error!("Unknown method {:?}.", method.as_str().unwrap());
+                        }
+                    }
+                    continue;
+                }
+
+                error!("Unhandled core request");
+
+            } else {
+                error!("Could deserialize core output as a json object");
+            }
+        });
 
         let stderr = process.stderr.unwrap();
+
         thread::spawn(move || {
-                          let buf_reader = BufReader::new(stderr);
-                          for line in buf_reader.lines() {
-                              if let Ok(line) = line {
-                                  error!("[core] {}", line);
-                              }
-                          }
-                      });
+            let buf_reader = BufReader::new(stderr);
+            for line in buf_reader.lines() {
+                if let Ok(line) = line {
+                    error!("[core] {}", line);
+                }
+            }
+        });
 
         let stdin = process.stdin.unwrap();
 
@@ -83,10 +94,11 @@ impl Core {
             current_view: "".into(),
             views: HashMap::new(),
         };
+
         let view_id = core.new_view(Some(file.to_string()))
-                          .as_str()
-                          .unwrap()
-                          .to_string();
+            .as_str()
+            .unwrap()
+            .to_string();
         let view = View::new(file.to_string());
         core.views.insert(view_id.clone(), view);
         core.current_view = view_id;
@@ -172,7 +184,7 @@ impl Core {
     pub fn save(&mut self) {
         let views = self.views.clone();
         let save_params = json!({
-            "view_id": &self.current_view.clone(),
+            "view_id": &self.current_view.as_str(),
             "file_path": &views[&self.current_view].filepath.clone(),
         });
         self.request("save", save_params);
@@ -185,6 +197,7 @@ impl Core {
     pub fn left(&mut self) {
         self.call_edit("move_left", None);
     }
+
     pub fn left_sel(&mut self) {
         self.call_edit("move_left_and_modify_selection", None);
     }
@@ -192,6 +205,7 @@ impl Core {
     pub fn right(&mut self) {
         self.call_edit("move_right", None);
     }
+
     pub fn right_sel(&mut self) {
         self.call_edit("move_right_and_modify_selection", None);
     }
@@ -199,6 +213,7 @@ impl Core {
     pub fn up(&mut self) {
         self.call_edit("move_up", None);
     }
+
     pub fn up_sel(&mut self) {
         self.call_edit("move_up_and_modify_selection", None);
     }
@@ -206,6 +221,7 @@ impl Core {
     pub fn down(&mut self) {
         self.call_edit("move_down", None);
     }
+
     pub fn down_sel(&mut self) {
         self.call_edit("move_down_and_modify_selection", None);
     }
@@ -217,6 +233,7 @@ impl Core {
     pub fn page_up(&mut self) {
         self.call_edit("page_up", None);
     }
+
     pub fn page_up_sel(&mut self) {
         self.call_edit("page_up_and_modify_selection", None);
     }
@@ -251,6 +268,7 @@ impl Core {
     pub fn click(&mut self, line: u64, column: u64) {
         self.call_edit("click", Some(json!([line, column, 0, 1])));
     }
+
     pub fn drag(&mut self, line: u64, column: u64) {
         self.call_edit("drag", Some(json!([line, column, 0, 1])));
     }
@@ -267,40 +285,8 @@ impl Core {
             .map(|x| x.into())
             .unwrap()
     }
+
     pub fn paste(&mut self, s: String) {
         self.call_edit("insert", Some(json!({"chars": s})));
-    }
-
-    #[allow(dead_code)]
-    pub fn test(&mut self) {
-        self.render_lines(0, 10);
-    }
-
-    pub fn render_lines(&mut self, _start: u64, _end: u64) {
-        unimplemented!()
-        // self.rpc_index += 1;
-        // println!("render_lines");
-        // let value = ArrayBuilder::new()
-        //     .push("rpc")
-        //     .push_object(|builder| builder
-        //         .insert("index", self.rpc_index)
-        //         .insert_array("request", |builder| builder
-        //             .push("render_lines")
-        //             .push_object(|builder| builder
-        //                 .insert("first_line", _start)
-        //                 .insert("last_line", _end)
-        //             )
-        //         )
-        //     ).unwrap();
-        // self.write(value);
-    }
-
-    pub fn render_lines_sync(&mut self, _start: u64, _end: u64) -> Value {
-        unimplemented!()
-        // self.render_lines(_start, _end);
-        // let value = self.rpc_rx.recv().unwrap();
-        // let object = value.as_object().unwrap();
-        // assert_eq!(self.rpc_index, object.get("index").unwrap().as_u64().unwrap());
-        // object.get("result").unwrap().clone()
     }
 }
