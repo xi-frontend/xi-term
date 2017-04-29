@@ -1,6 +1,7 @@
 use std::io::stdin;
 use std::sync::mpsc;
 use std::thread;
+use std::process;
 
 use termion;
 use termion::input::TermRead;
@@ -23,15 +24,16 @@ impl Input {
     pub fn run(&mut self) {
         let tx = self.tx.clone();
         thread::spawn(move || for event_res in stdin().events() {
-                          match event_res {
-                              Ok(event) => {
-                tx.send(event).unwrap();
+            match event_res {
+                Ok(event) => {
+                    info!("input event {:?}", event);
+                    tx.send(event).unwrap();
+                }
+                Err(err) => {
+                    error!("{:?}", err);
+                }
             }
-                              Err(err) => {
-                error!("{:?}", err);
-            }
-                          }
-                      });
+        });
     }
 
     pub fn try_recv(&mut self) -> Result<termion::event::Event, mpsc::TryRecvError> {
@@ -44,23 +46,23 @@ pub fn handle(event: &termion::event::Event, core: &mut Core) {
         termion::event::Event::Key(key) => {
             match key {
                 termion::event::Key::Char(c) => {
-                    core.char(c);
+                    core.insert(c.to_string().as_str());
                 }
                 termion::event::Key::Ctrl(c) => {
                     match c {
                         'c' => {
                             info!("received ^C: exiting");
-                            std::process::exit(0);
+                            process::exit(0);
                         }
                         'w' => {
                             info!("received ^W: writing current file");
-                            core.save();
+                            core.save("dummy");
                         }
                         _ => {}
                     }
                 }
                 termion::event::Key::Backspace => {
-                    core.del();
+                    core.delete_backward();
                 }
                 termion::event::Key::Left => {
                     core.move_left();
