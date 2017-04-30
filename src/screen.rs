@@ -1,22 +1,16 @@
-use std;
-use std::cmp;
-use std::io::stdout;
-use std::io::Write;
-use std::thread;
-use std::time;
-
-use termion;
-use termion::clear;
-use termion::cursor;
-use termion::input::MouseTerminal;
-use termion::screen::AlternateScreen;
-use termion::raw::{IntoRawMode, RawTerminal};
+use std::{self, cmp, thread, time};
+use std::io::{stdout, Write};
 
 use serde_json;
 
+use termion::{self, clear, cursor};
+use termion::input::MouseTerminal;
+use termion::raw::{IntoRawMode, RawTerminal};
+use termion::screen::AlternateScreen;
+
 use core::Core;
-use view::View;
 use errors::*;
+use view::View;
 
 pub struct Screen {
     pub stdout: MouseTerminal<AlternateScreen<RawTerminal<std::io::Stdout>>>,

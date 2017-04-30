@@ -2,35 +2,39 @@
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", deny(clippy))]
 
+#[macro_use]
+extern crate clap;
+
+#[macro_use]
+extern crate error_chain;
+
+#[macro_use]
+extern crate log;
+extern crate log4rs;
+
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate log;
-extern crate log4rs;
+
 extern crate termion;
 
 mod core;
+mod errors;
 mod input;
 mod line;
-mod update;
 mod operation;
 mod screen;
+mod update;
 mod view;
-mod errors;
 
-use core::Core;
-use input::Input;
-use screen::Screen;
 use error_chain::ChainedError;
 
+use core::Core;
 use errors::*;
+use input::Input;
+use screen::Screen;
 
 fn main() {
     if let Err(ref e) = run() {

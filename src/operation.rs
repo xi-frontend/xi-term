@@ -1,7 +1,8 @@
 use serde;
 use serde_json as json;
-use line::Line;
+
 use errors::*;
+use line::Line;
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub enum OperationType {

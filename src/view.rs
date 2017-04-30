@@ -1,6 +1,6 @@
+use errors::*;
 use line::Line;
 use update::Update;
-use errors::*;
 
 #[derive(Clone)]
 pub struct View {
