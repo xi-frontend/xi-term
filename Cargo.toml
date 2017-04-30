@@ -9,6 +9,7 @@ yaml_format = []
 
 [dependencies]
 clippy = {version = "*", optional = true}
+error-chain = "*"
 termion = "*"
 jsonrpc-core = "*"
 serde_json = "*"

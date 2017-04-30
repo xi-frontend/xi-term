@@ -1,47 +1,45 @@
-use std;
-use std::cmp;
-use std::io::stdout;
-use std::io::Write;
-use std::thread;
-use std::time;
-
-use termion;
-use termion::clear;
-use termion::cursor;
-use termion::input::MouseTerminal;
-use termion::raw::IntoRawMode;
-use termion::raw::RawTerminal;
+use std::{self, cmp, thread, time};
+use std::io::{stdout, Write};
 
 use serde_json;
 
+use termion::{self, clear, cursor};
+use termion::input::MouseTerminal;
+use termion::raw::{IntoRawMode, RawTerminal};
+use termion::screen::AlternateScreen;
+
 use core::Core;
+use errors::*;
 use view::View;
 
 pub struct Screen {
-    pub stdout: MouseTerminal<RawTerminal<std::io::Stdout>>,
+    pub stdout: MouseTerminal<AlternateScreen<RawTerminal<std::io::Stdout>>>,
     pub size: (u16, u16),
 }
 
 impl Screen {
-    pub fn new() -> Screen {
-        let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
-        write!(stdout, "{}", clear::All).unwrap();
-        stdout.flush().unwrap();
-        Screen {
-            size: termion::terminal_size().unwrap(),
-            stdout: stdout,
-        }
+    pub fn new() -> Result<Screen> {
+        let stdout = MouseTerminal::from(AlternateScreen::from(stdout().into_raw_mode()?));
+        Ok(Screen {
+               size: termion::terminal_size()?,
+               stdout: stdout,
+           })
     }
 
-    pub fn draw(&mut self, view: &View) {
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
-        write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
+    pub fn draw(&mut self, view: &View) -> Result<()> {
+        write!(self.stdout, "{}{}", clear::All, cursor::Up(self.size.1))
+            .chain_err(|| ErrorKind::DisplayError)?;
 
         let range = 0..(cmp::min(view.lines.len(), self.size.1 as usize));
         for (lineno, line) in range.zip(view.lines.iter()) {
-            write!(self.stdout, "{}", line.text.clone().unwrap()).unwrap();
+            if line.is_valid {
+                let text = line.text.as_ref().map(|s| &**s).unwrap_or("");
+                write!(self.stdout, "{}", text)
+                    .chain_err(|| ErrorKind::DisplayError)?;
+            }
             self.scroll(0, lineno as u64);
         }
+        Ok(())
     }
 
     pub fn scroll(&mut self, col: u64, line: u64) {
@@ -49,13 +47,16 @@ impl Screen {
         self.stdout.flush().unwrap();
     }
 
-    pub fn init(&mut self) {
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
-        write!(self.stdout, "{}", cursor::Up(self.size.1)).unwrap();
-        self.stdout.flush().unwrap();
+    pub fn init(&mut self) -> Result<()> {
+        write!(self.stdout, "{}{}", clear::All, cursor::Up(self.size.1))
+            .chain_err(|| ErrorKind::DisplayError)?;
+        self.stdout
+            .flush()
+            .chain_err(|| ErrorKind::DisplayError)?;
+        Ok(())
     }
 
-    pub fn update(&mut self, core: &mut Core) {
+    pub fn update(&mut self, core: &mut Core) -> Result<()> {
         // TODO(#27): check if terminal size changed. If so, send a `render_line` command to the
         // backend, and a `scroll` command for future updates.
         if let Ok(msg) = core.update_rx.try_recv() {
@@ -64,12 +65,10 @@ impl Screen {
                                     msg_list[1].as_object().unwrap());
             match method {
                 "update" => {
-                    let update = serde_json::from_value(params.get("update").unwrap().clone())
-                        .unwrap();
-                    core.update(&update);
-
-                    let view = core.view();
-                    self.draw(&view);
+                    let update = serde_json::from_value(params.get("update").unwrap().clone())?;
+                    core.update(&update)?;
+                    let view = core.get_view().ok_or(ErrorKind::DisplayError)?;
+                    self.draw(view)?;
                 }
                 "scroll_to" => {
                     let (col, line) = (params.get("col").unwrap().as_u64().unwrap(),
@@ -86,5 +85,6 @@ impl Screen {
         } else {
             thread::sleep(time::Duration::from_millis(10));
         }
+        Ok(())
     }
 }
