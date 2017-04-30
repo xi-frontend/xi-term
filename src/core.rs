@@ -137,6 +137,7 @@ impl Core {
     }
 
     /// Serialize JSON object and send it to the server
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn send(&mut self, message: &Value) -> Result<()> {
         let mut str_msg = serde_json::to_string(&message)
             .chain_err(|| {
@@ -179,6 +180,7 @@ impl Core {
         self.call_sync("edit", msg)
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn new_view(&mut self, file_path: Option<String>) -> Result<String> {
         let msg: Value;
         if let Some(file_path) = file_path {
@@ -283,6 +285,7 @@ impl Core {
         self.call_edit("drag", Some(json!([line, column, 0, 1])))
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn copy(&mut self) -> Result<String> {
         self.call_edit_sync("copy", None)?
             .as_str()
@@ -293,6 +296,7 @@ impl Core {
             })
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn cut(&mut self) -> Result<String> {
         self.call_edit_sync("cut", None)?
             .as_str()
@@ -314,5 +318,4 @@ impl Core {
         self.current_view = view_id;
         Ok(())
     }
-
 }

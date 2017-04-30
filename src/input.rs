@@ -20,6 +20,7 @@ impl Input {
         Input { tx: tx, rx: rx }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn run(&mut self) {
         let tx = self.tx.clone();
         thread::spawn(move || {
