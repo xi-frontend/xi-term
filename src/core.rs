@@ -18,7 +18,7 @@ use errors::*;
 pub struct Core {
     stdin: ChildStdin,
     pub update_rx: mpsc::Receiver<Value>,
-    rpc_rx: mpsc::Receiver<(u64, Value)>, // ! A simple piping works only for synchronous calls.
+    rpc_rx: mpsc::Receiver<(u64, ::std::result::Result<Value, Value>)>,
     rpc_index: u64,
     current_view: String,
     views: HashMap<String, View>,
@@ -50,7 +50,12 @@ impl Core {
                 let req = data.as_object().unwrap();
 
                 if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
-                    rpc_tx.send((id.as_u64().unwrap(), result.clone())).unwrap();
+                    rpc_tx.send((id.as_u64().unwrap(), Ok(result.clone()))).unwrap();
+                    continue;
+                }
+
+                if let (Some(error), Some(id)) = (req.get("error"), req.get("id")) {
+                    rpc_tx.send((id.as_u64().unwrap(), Err(error.clone()))).unwrap();
                     continue;
                 }
 
@@ -155,11 +160,17 @@ impl Core {
         Ok(())
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn call_sync(&mut self, method: &str, params: Value) -> Result<Value> {
         let i = self.request(method, params)?;
         let (id, result) = self.rpc_rx.recv().unwrap();
         assert_eq!(i, id);
-        Ok(result)
+        // TODO: in the future, the caller should handle the error. For now we just log it and move
+        // on, returning a generic RpcError.
+        result.or_else(|err| {
+            error!("synchronous call returned with an error");
+            Err(ErrorKind::RpcError.into())
+        })
     }
 
     fn call_edit(&mut self, method: &str, params: Option<Value>) -> Result<()> {
