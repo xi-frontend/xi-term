@@ -60,8 +60,10 @@ impl Operation {
                 let new_ix = old_ix + self.nb_lines;
                 debug!("invalidating lines {} to {}", old_ix, new_ix);
 
-                for _ in 0..self.nb_lines {
-                    new_lines.push(Line::invalid());
+                for i in 0..self.nb_lines {
+                    let mut line = old_lines[i as usize].clone();
+                    line.is_valid = false;
+                    new_lines.push(line);
                 }
                 Ok(new_ix)
             }

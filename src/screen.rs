@@ -30,12 +30,17 @@ impl Screen {
         write!(self.stdout, "{}{}", clear::All, cursor::Up(self.size.1))
             .chain_err(|| ErrorKind::DisplayError)?;
 
-        let range = 0..(cmp::min(view.lines.len(), self.size.1 as usize));
-        for (lineno, line) in range.zip(view.lines.iter()) {
+        let mut invalid_lines: usize = 0;
+        for (lineno, line) in view.lines.iter().enumerate() {
             if line.is_valid {
                 let text = line.render()?;
-                write!(self.stdout, "{}{}{}", cursor::Goto(1, 1 + lineno as u16), text, cursor::Hide)
+                write!(self.stdout, "{}{}{}", cursor::Goto(1, 1 + (lineno - invalid_lines) as u16), text, cursor::Hide)
                     .chain_err(|| ErrorKind::DisplayError)?;
+            } else {
+                invalid_lines += 1;
+            }
+            if lineno > invalid_lines && (lineno - invalid_lines) == self.size.1 as usize {
+                break;
             }
         }
         self.stdout
