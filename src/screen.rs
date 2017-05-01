@@ -3,7 +3,7 @@ use std::io::{stdout, Write};
 
 use serde_json;
 
-use termion::{self, clear, cursor};
+use termion::{self, clear, cursor, style};
 use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
@@ -30,21 +30,31 @@ impl Screen {
         write!(self.stdout, "{}{}", clear::All, cursor::Up(self.size.1))
             .chain_err(|| ErrorKind::DisplayError)?;
 
-        let range = 0..(cmp::min(view.lines.len(), self.size.1 as usize));
-        for (lineno, line) in range.zip(view.lines.iter()) {
+        let mut invalid_lines: usize = 0;
+        for (lineno, line) in view.lines.iter().enumerate() {
             if line.is_valid {
-                let text = line.text.as_ref().map(|s| &**s).unwrap_or("");
-                write!(self.stdout, "{}", text)
+                let text = line.render()?;
+                write!(self.stdout, "{}{}{}", cursor::Goto(1, 1 + (lineno - invalid_lines) as u16), text, cursor::Hide)
                     .chain_err(|| ErrorKind::DisplayError)?;
+            } else {
+                invalid_lines += 1;
             }
-            self.scroll(0, lineno as u64);
+            if lineno > invalid_lines && (lineno - invalid_lines) == self.size.1 as usize {
+                break;
+            }
         }
+        self.stdout
+            .flush()
+            .chain_err(|| ErrorKind::DisplayError)?;
         Ok(())
     }
 
-    pub fn scroll(&mut self, col: u64, line: u64) {
-        write!(self.stdout, "{}", cursor::Goto((col + 1) as u16, (line + 1) as u16)).unwrap();
-        self.stdout.flush().unwrap();
+    pub fn scroll_to(&mut self, _col: u64, _line: u64) {
+        // We draw "fake" cursor(s) while rendering the lines. so there's nothing to do here.
+        // However, on the long term, we do want to set the cursor correctly, so that it can blink.
+        // One problem is that xi-core returns gives the position of the cursor as a string index.
+        // But we have some characters that are more or less large: a tab can be multiple spaces
+        // for example. So we need some logic to know exactly where the cursor should be set.
     }
 
     pub fn init(&mut self) -> Result<()> {
@@ -73,7 +83,7 @@ impl Screen {
                 "scroll_to" => {
                     let (col, line) = (params.get("col").unwrap().as_u64().unwrap(),
                                        params.get("line").unwrap().as_u64().unwrap());
-                    self.scroll(col, line);
+                    self.scroll_to(col, line);
                 }
                 "set_style" => {
                     // TODO:(#26): ???
