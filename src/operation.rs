@@ -39,9 +39,9 @@ fn deserialize_operation_type<'de, D>(de: D) -> ::std::result::Result<OperationT
 
 impl Operation {
     pub fn apply(&self, old_lines: &[Line], old_ix: u64, new_lines: &mut Vec<Line>) -> Result<u64> {
-        // FIXME: this method panics if we don't check old_lines indices access.
-        // we should check old_lines length and return an error when trying to access an out of
-        // bound index.
+        // FIXME(#34): this method panics if we don't check old_lines indices
+        // access. We should check old_lines length and return an error when
+        // trying to access an out of bound index.
         match self.operation_type {
             OperationType::Copy_ => {
                 let new_ix = old_ix + self.nb_lines;
