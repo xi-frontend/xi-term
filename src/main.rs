@@ -21,6 +21,7 @@ extern crate serde_json;
 extern crate termion;
 
 mod core;
+mod cursor;
 mod errors;
 mod input;
 mod line;
@@ -69,9 +70,8 @@ fn run() -> Result<()> {
     let mut screen = Screen::new()?;
     let mut input = Input::new();
     input.run();
-    screen.init()?;
     core.open(file)?;
-    core.scroll(0, screen.size.1 as u64 - 2)?;
+    core.scroll(0, screen.size.1 as u64)?;
 
     loop {
         if let Ok(event) = input.try_recv() {
