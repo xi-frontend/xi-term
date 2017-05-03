@@ -77,7 +77,7 @@ impl Line {
                 offset += 2;
             }
         }
-        write!(w, "{}{}{}", cursor::Goto(1, lineno), line, clear::AfterCursor)
+        write!(w, "{}{}{}", cursor::Goto(1, lineno), clear::CurrentLine, line)
             .chain_err(|| ErrorKind::DisplayError)?;
         w.flush().chain_err(|| ErrorKind::DisplayError)?;
         Ok(())
