@@ -1,6 +1,7 @@
 use std::io::Write;
 
-use termion::{clear, cursor};
+use termion::clear;
+use termion::cursor;
 
 use cursor::Cursor;
 use errors::*;
@@ -162,14 +163,9 @@ impl View {
                     .unwrap_or("")
                     .chars()
                     .take(cursor.column as usize)
-                    .fold(0, |acc, c| {
-                        if c == '\t' {
-                            acc + TAB_LENGTH - (acc % TAB_LENGTH)
-                        } else {
-                            acc + 1
-                        }
-                    });
-                let cursor_pos = cursor::Goto(column as u16 + 1, cursor.line + 1);
+                    .fold(0 as u16, add_char_width);
+
+                let cursor_pos = cursor::Goto(column + 1, cursor.line + 1);
                 write!(w, "{}", cursor_pos)
                     .chain_err(|| ErrorKind::DisplayError)?;
                 w.flush().chain_err(|| ErrorKind::DisplayError)?;
@@ -182,5 +178,13 @@ impl View {
             warn!("No cursor to render");
         }
         Ok(())
+    }
+}
+
+fn add_char_width(acc: u16, c: char) -> u16 {
+    if c == '\t' {
+        acc + TAB_LENGTH - (acc % TAB_LENGTH)
+    } else {
+        acc + 1
     }
 }

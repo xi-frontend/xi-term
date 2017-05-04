@@ -1,7 +1,9 @@
 use std::io::Write;
 use std::default::Default;
 
-use termion::{clear, style, cursor};
+use termion::clear;
+use termion::cursor;
+use termion::style;
 
 use cursor::Cursor;
 use errors::*;
@@ -14,7 +16,7 @@ fn _return_true() -> bool {
 pub struct Line {
     pub text: Option<String>,
     #[serde(rename="cursor")]
-    pub cursors: Option<Vec<u16>>,
+    pub cursors: Option<Vec<u64>>,
     pub styles: Option<Vec<i64>>,
     #[serde(default="_return_true")]
     #[serde(skip_deserializing)]
@@ -52,7 +54,7 @@ impl Line {
                 // If this cursor is the real cursor we don't want to draw it.
                 // We skip it, and the cursor will be set here later.
                 if let Some(real_cursor) = cursor {
-                    if real_cursor.column == *idx {
+                    if real_cursor.column as u64 == *idx {
                         continue;
                     }
                 }

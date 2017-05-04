@@ -70,6 +70,7 @@ fn run() -> Result<()> {
     let mut screen = Screen::new()?;
     let mut input = Input::new();
     input.run();
+    screen.init()?;
     core.open(file)?;
     core.scroll(0, screen.size.1 as u64)?;
 

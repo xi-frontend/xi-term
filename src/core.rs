@@ -122,7 +122,7 @@ impl Core {
             view.update_cursor(cursor);
             Ok(())
         } else {
-            error!("View {} not found", &self.current_view);
+            error!("View {} not found", self.current_view.as_str());
             bail!(ErrorKind::UpdateError);
         }
     }

@@ -1,9 +1,14 @@
-use std::{self, thread, time};
+use std;
 use std::io::stdout;
+use std::io::Write;
+use std::thread;
+use std::time;
 
 use serde_json;
 
 use termion;
+use termion::clear;
+use termion::cursor;
 use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
@@ -24,6 +29,15 @@ impl Screen {
                size: termion::terminal_size()?,
                stdout: stdout,
            })
+    }
+
+    pub fn init(&mut self) -> Result<()> {
+        write!(self.stdout, "{}{}", clear::All, cursor::Up(self.size.1))
+            .chain_err(|| ErrorKind::DisplayError)?;
+        self.stdout
+            .flush()
+            .chain_err(|| ErrorKind::DisplayError)?;
+        Ok(())
     }
 
     pub fn update(&mut self, core: &mut Core) -> Result<()> {
