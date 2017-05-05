@@ -3,32 +3,21 @@ use std::io::Write;
 use termion::clear;
 use termion::cursor;
 
+use cache::LineCache;
 use cursor::Cursor;
 use errors::*;
-use line::Line;
 use update::Update;
+use window::Window;
 
 const TAB_LENGTH: u16 = 4;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct View {
     last_rev: u64,
-    state: State,
     pub filepath: String,
-    pub lines: Vec<Line>,
-    pub cursor: Option<Cursor>,
-}
-
-#[derive(Clone)]
-enum State {
-    /// The view did not change since last time it was rendered
-    Clean,
-    /// The lines changes since last time the view was rendered
-    Lines,
-    /// The cursor changed since last time the view was rendered
-    Cursor,
-    /// Both the lines and the cursor changed since last time the view was rendered
-    All,
+    cache: LineCache,
+    cursor: Cursor,
+    window: Window,
 }
 
 impl View {
@@ -36,147 +25,120 @@ impl View {
         View {
             last_rev: 0,
             filepath: filepath.to_owned(),
-            lines: vec![],
-            cursor: None,
-            state: State::Clean,
+            cache: LineCache::new(),
+            cursor: Cursor::new(),
+            window: Window::new(),
         }
     }
 
     pub fn update_lines(&mut self, update: &Update) -> Result<()> {
-        let mut lines = vec![];
-        let mut index = 0;
-
-        for operation in &update.operations {
-            index = operation.apply(&self.lines, index, &mut lines)?;
-        }
-
-        self.lines = lines;
-        self.set_dirty_lines();
-        Ok(())
+        self.cache.update(update)
     }
 
-    pub fn update_cursor(&mut self, cursor: &Cursor) {
-        self.cursor = Some(cursor.clone());
-        self.set_dirty_cursor();
+    pub fn update_cursor(&mut self, cursor_pos: (u64, u64)) {
+        self.cursor.update(cursor_pos);
+        self.window.update(&self.cursor.clone());
     }
 
-    /// Return true if the lines were updated since last time the view was rendered.
-    fn dirty_lines(&self) -> bool {
-        match self.state {
-            State::All | State::Lines => true,
-            _ => false,
-        }
-    }
-
-    fn dirty_cursor(&self) -> bool {
-        match self.state {
-            State::All | State::Cursor => true,
-            _ => false,
-        }
-    }
-
-    fn set_dirty_lines(&mut self) {
-        match self.state {
-            State::Clean => self.state = State::Lines,
-            State::Cursor => self.state = State::All,
-            _ => {}
-        }
-    }
-
-    fn set_dirty_cursor(&mut self) {
-        match self.state {
-            State::Clean => self.state = State::Cursor,
-            State::Lines => self.state = State::All,
-            _ => {}
-        }
-    }
-
-    fn set_clean_lines(&mut self) {
-        match self.state {
-            State::All => self.state = State::Cursor,
-            State::Lines => self.state = State::Clean,
-            _ => {}
-        }
-    }
-
-    fn set_clean_cursor(&mut self) {
-        match self.state {
-            State::All => self.state = State::Lines,
-            State::Cursor => self.state = State::Clean,
-            _ => {}
-        }
-    }
 
     pub fn render<W: Write>(&mut self, w: &mut W, height: u16) -> Result<()> {
-        if self.dirty_lines() {
+        self.window.resize(height);
+
+        if self.cache.is_dirty() || self.window.is_dirty() {
             write!(w, "{}{}", cursor::Goto(1, 1), clear::All)
                 .chain_err(|| ErrorKind::DisplayError)?;
 
-            self.render_lines(w, height)?;
-            self.set_clean_lines();
+            self.render_lines(w)?;
+            self.cache.mark_clean();
+            self.window.mark_clean();
         }
 
-        if self.dirty_cursor() {
-            self.render_cursor(w)?;
-            self.set_clean_cursor();
-        }
+        self.render_cursor(w)?;
+
         Ok(())
     }
 
-    fn render_lines<W: Write>(&self, w: &mut W, height: u16) -> Result<()> {
-        let mut invalid_lines: usize = 0;
-        for (lineno, line) in self.lines.iter().enumerate() {
-            if line.is_valid {
-                // Lines are drawn with fake cursors.
-                // We set the actual cursor later, redrawing the line in the process.
-                line.render(w, (lineno - invalid_lines) as u16 + 1, None)?;
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    fn render_lines<W: Write>(&self, w: &mut W) -> Result<()> {
+        debug!("Rendering lines");
+
+        // Get the lines that are within the displayed window
+        let lines = self.cache
+            .lines()
+            .iter()
+            .skip(self.window.start() as usize)
+            .take(self.window.size() as usize);
+
+        // Draw the valid lines within this range
+        for (lineno, line) in lines.enumerate() {
+            if !line.is_valid {
+                continue;
+            }
+
+            // Get the line vertical offset so that we know where to draw it.
+            let line_pos = self.window
+                .offset(self.window.start() + lineno as u64)
+                .ok_or_else(|| {
+                    error!("Could not find line position within the window");
+                    ErrorKind::DisplayError
+                })?;
+
+            // Lines are drawn with fake cursors.
+            // We set the actual cursor later, redrawing the line in the process.
+            if lineno as u64 + self.window.start() == self.cursor.line {
+                line.render(w, line_pos + 1, Some(&self.cursor))?;
             } else {
-                invalid_lines += 1;
-            }
-            if lineno > invalid_lines && (lineno - invalid_lines) == height as usize {
-                break;
+                line.render(w, line_pos + 1, None)?;
             }
         }
         Ok(())
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn render_cursor<W: Write>(&self, w: &mut W) -> Result<()> {
-        if let Some(cursor) = self.cursor.as_ref() {
-            if cursor.line as usize <= self.lines.len() {
-                // Redraw the line without the fake cursor
-                let line = self.lines
-                    .get(cursor.line as usize)
-                    .and_then(|line| if line.is_valid { Some(line) } else { None })
-                    .ok_or_else(|| {
-                        error!("No valid line at cursor index {}", cursor.line);
-                        ErrorKind::DisplayError
-                    })?;
-                line.render(w, cursor.line + 1, Some(cursor))?;
-
-                // Draw the cursor. The trick is that some characters are larger than others.
-                //
-                // For the moment, we only handle tabs, and we assume the terminal has tabstops of
-                // TAB_LENGTH.
-                let column = line.text
-                    .as_ref()
-                    .map(|s| &**s)
-                    .unwrap_or("")
-                    .chars()
-                    .take(cursor.column as usize)
-                    .fold(0 as u16, add_char_width);
-
-                let cursor_pos = cursor::Goto(column + 1, cursor.line + 1);
-                write!(w, "{}", cursor_pos)
-                    .chain_err(|| ErrorKind::DisplayError)?;
-                w.flush().chain_err(|| ErrorKind::DisplayError)?;
-            } else {
-                error!("Cursor is on line {} but we have only {} lines",
-                       cursor.line, self.lines.len());
-                bail!(ErrorKind::DisplayError)
-            }
-        } else {
-            warn!("No cursor to render");
+        debug!("Rendering cursor");
+        if !self.window.is_within_window(self.cursor.line) {
+            error!("Cursor is on line {} which is not within the displayed window", self.cursor.line);
+            bail!(ErrorKind::DisplayError)
         }
+
+        // Get the line that has the cursor
+        let line = self.cache
+            .lines()
+            .get(self.cursor.line as usize)
+            .and_then(|line| if line.is_valid { Some(line) } else { None })
+            .ok_or_else(|| {
+                error!("No valid line at cursor index {}", self.cursor.line);
+                ErrorKind::DisplayError
+            })?;
+
+        // Get the line vertical offset so that we know where to draw it.
+        let line_pos = self.window
+            .offset(self.cursor.line)
+            .ok_or_else(|| {
+                error!("Could not find line position within the window: {:?}", line);
+                ErrorKind::DisplayError
+            })?;
+
+        // Calculate the cursor position on the line. The trick is that we know the position within
+        // the string, but characters may have various lengths. For the moment, we only handle
+        // tabs, and we assume the terminal has tabstops of TAB_LENGTH. We consider that all the
+        // other characters have a width of 1.
+        let column = line.text
+            .as_ref()
+            .map(|s| &**s)
+            .unwrap_or("")
+            .chars()
+            .take(self.cursor.column as usize)
+            .fold(0, add_char_width);
+
+        // Draw the cursor
+        let cursor_pos = cursor::Goto(column as u16 + 1, line_pos + 1);
+        write!(w, "{}", cursor_pos)
+            .chain_err(|| ErrorKind::DisplayError)?;
+        debug!("Cursor set at line {} column {}", line_pos, column);
+        w.flush().chain_err(|| ErrorKind::DisplayError)?;
+
         Ok(())
     }
 }

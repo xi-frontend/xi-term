@@ -57,15 +57,11 @@ impl Operation {
                 Ok(old_ix + self.nb_lines)
             }
             OperationType::Invalidate => {
-                let new_ix = old_ix + self.nb_lines;
-                debug!("invalidating lines {} to {}", old_ix, new_ix);
-
-                for i in 0..self.nb_lines {
-                    let mut line = old_lines[i as usize].clone();
-                    line.is_valid = false;
-                    new_lines.push(line);
+                debug!("adding invalid {} lines", old_ix);
+                for _ in 0..self.nb_lines {
+                    new_lines.push(Line::invalid());
                 }
-                Ok(new_ix)
+                Ok(old_ix)
             }
             OperationType::Update => {
                 let new_ix = old_ix + self.nb_lines;
