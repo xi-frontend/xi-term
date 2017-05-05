@@ -29,6 +29,7 @@ mod input;
 mod line;
 mod operation;
 mod screen;
+mod style;
 mod update;
 mod view;
 

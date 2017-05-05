@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::collections::HashMap;
 
 use termion::clear;
 use termion::cursor;
@@ -6,6 +7,7 @@ use termion::cursor;
 use cache::LineCache;
 use cursor::Cursor;
 use errors::*;
+use style::Style;
 use update::Update;
 use window::Window;
 
@@ -18,6 +20,7 @@ pub struct View {
     cache: LineCache,
     cursor: Cursor,
     window: Window,
+    styles: HashMap<u16, Style>,
 }
 
 impl View {
@@ -28,7 +31,12 @@ impl View {
             cache: LineCache::new(),
             cursor: Cursor::new(),
             window: Window::new(),
+            styles: HashMap::new(),
         }
+    }
+
+    pub fn set_style(&mut self, style: Style) {
+        self.styles.insert(style.id, style);
     }
 
     pub fn update_lines(&mut self, update: &Update) -> Result<()> {

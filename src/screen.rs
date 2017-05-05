@@ -14,6 +14,7 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 
 use core::Core;
+use style::Style;
 use errors::*;
 
 pub struct Screen {
@@ -70,7 +71,13 @@ impl Screen {
                         .render(&mut self.stdout, self.size.1)?
                 }
                 "set_style" => {
-                    // TODO:(#26): ???
+                    let style: Style = serde_json::from_value(params.get("set_style").unwrap().clone())?;
+                    core.get_view_mut()
+                        .ok_or_else(|| {
+                            error!("No view found");
+                            ErrorKind::DisplayError
+                        })?
+                        .set_style(style);
                 }
                 _ => {
                     info!("Unknown request from backend {:?}", method);
