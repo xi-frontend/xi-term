@@ -91,13 +91,7 @@ impl View {
                     ErrorKind::DisplayError
                 })?;
 
-            // Lines are drawn with fake cursors.
-            // We set the actual cursor later, redrawing the line in the process.
-            if lineno as u64 + self.window.start() == self.cursor.line {
-                line.render(w, line_pos + 1, Some(&self.cursor))?;
-            } else {
-                line.render(w, line_pos + 1, None)?;
-            }
+            line.render(w, line_pos + 1)?;
         }
         Ok(())
     }
