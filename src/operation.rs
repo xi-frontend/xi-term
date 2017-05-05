@@ -73,7 +73,7 @@ impl Operation {
                 let lines = self.lines.clone().unwrap();
                 for i in old_ix..new_ix {
                     let mut line = old_lines[i as usize].clone();
-                    line.cursor = lines[i as usize].cursor.clone();
+                    line.cursors = lines[i as usize].cursors.clone();
                     line.styles = lines[i as usize].styles.clone();
                     new_lines.push(line);
                 }

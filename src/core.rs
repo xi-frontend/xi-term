@@ -11,6 +11,7 @@ use std::thread;
 use serde_json;
 use serde_json::Value;
 
+use cursor::Cursor;
 use update::Update;
 use view::View;
 use errors::*;
@@ -107,15 +108,31 @@ impl Core {
         info!("Updating current view");
 
         if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.update(update)
+            view.update_lines(update)
         } else {
             error!("View {} not found", &self.current_view);
             bail!(ErrorKind::UpdateError);
         }
     }
 
+    pub fn scroll_to(&mut self, cursor: &Cursor) -> Result<()> {
+        info!("Updating cursor position");
+
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.update_cursor(cursor);
+            Ok(())
+        } else {
+            error!("View {} not found", self.current_view.as_str());
+            bail!(ErrorKind::UpdateError);
+        }
+    }
+
     pub fn get_view(&self) -> Option<&View> {
         self.views.get(&self.current_view)
+    }
+
+    pub fn get_view_mut(&mut self) -> Option<&mut View> {
+        self.views.get_mut(&self.current_view)
     }
 
     /// Build and send a JSON RPC request, returning the associated request ID to pair it with
@@ -167,7 +184,7 @@ impl Core {
         assert_eq!(i, id);
         // TODO: in the future, the caller should handle the error. For now we just log it and move
         // on, returning a generic RpcError.
-        result.or_else(|err| {
+        result.or_else(|_| {
             error!("synchronous call returned with an error");
             Err(ErrorKind::RpcError.into())
         })
