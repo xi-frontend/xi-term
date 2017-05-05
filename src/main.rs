@@ -22,6 +22,8 @@ extern crate termion;
 
 mod core;
 mod cursor;
+mod window;
+mod cache;
 mod errors;
 mod input;
 mod line;
@@ -72,22 +74,20 @@ fn run() -> Result<()> {
     input.run();
     screen.init()?;
     core.open(file)?;
-    core.scroll(0, screen.size.1 as u64)?;
+    core.scroll(0, screen.height() as u64)?;
 
     loop {
         if let Ok(event) = input.try_recv() {
             if let Err(e) = input::handle(&event, &mut core) {
-                log_error(e);
+                log_error(&e);
             }
-        } else {
-            if let Err(e) = screen.update(&mut core) {
-                log_error(e);
-            }
+        } else if let Err(e) = screen.update(&mut core) {
+            log_error(&e);
         }
     }
 }
 
-fn log_error<E: ChainedError>(e: E) {
+fn log_error<E: ChainedError>(e: &E) {
     error!("error: {}", e);
     for e in e.iter().skip(1) {
         error!("caused by: {}", e);

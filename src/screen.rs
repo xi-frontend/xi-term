@@ -14,7 +14,6 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 
 use core::Core;
-use cursor::Cursor;
 use errors::*;
 
 pub struct Screen {
@@ -62,7 +61,7 @@ impl Screen {
                     // Deserialize the cursor position, and let the core update the view.
                     let coord = (params.get("line").unwrap().as_u64().unwrap(),
                                  params.get("col").unwrap().as_u64().unwrap());
-                    core.scroll_to(&Cursor::from(coord))?;
+                    core.scroll_to(coord)?;
                     core.get_view_mut()
                         .ok_or_else(|| {
                             error!("No view found");
@@ -81,5 +80,9 @@ impl Screen {
             thread::sleep(time::Duration::from_millis(10));
         }
         Ok(())
+    }
+
+    pub fn height(&self) -> u16 {
+        self.size.1
     }
 }

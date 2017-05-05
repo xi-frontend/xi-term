@@ -11,7 +11,6 @@ use std::thread;
 use serde_json;
 use serde_json::Value;
 
-use cursor::Cursor;
 use update::Update;
 use view::View;
 use errors::*;
@@ -115,16 +114,15 @@ impl Core {
         }
     }
 
-    pub fn scroll_to(&mut self, cursor: &Cursor) -> Result<()> {
+    pub fn scroll_to(&mut self, cursor: (u64, u64)) -> Result<()> {
         info!("Updating cursor position");
 
-        if let Some(view) = self.views.get_mut(&self.current_view) {
+        if let Some(view) = self.get_view_mut() {
             view.update_cursor(cursor);
-            Ok(())
-        } else {
-            error!("View {} not found", self.current_view.as_str());
-            bail!(ErrorKind::UpdateError);
+            return Ok(());
         }
+        error!("View {} not found", self.current_view.as_str());
+        bail!(ErrorKind::UpdateError);
     }
 
     pub fn get_view(&self) -> Option<&View> {
