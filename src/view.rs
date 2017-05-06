@@ -130,9 +130,6 @@ impl View {
         // tabs, and we assume the terminal has tabstops of TAB_LENGTH. We consider that all the
         // other characters have a width of 1.
         let column = line.text
-            .as_ref()
-            .map(|s| &**s)
-            .unwrap_or("")
             .chars()
             .take(self.cursor.column as usize)
             .fold(0, add_char_width);

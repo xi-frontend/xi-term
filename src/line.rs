@@ -13,9 +13,12 @@ fn _return_true() -> bool {
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct Line {
-    pub text: Option<String>,
+    #[serde(default)]
+    pub text: String,
+    #[serde(default)]
     #[serde(rename="cursor")]
-    pub cursors: Option<Vec<u64>>,
+    pub cursors: Vec<u64>,
+    #[serde(default)]
     pub styles: Vec<i64>,
     #[serde(default="_return_true")]
     #[serde(skip_deserializing)]
@@ -25,8 +28,8 @@ pub struct Line {
 impl Default for Line {
     fn default() -> Line {
         Line {
-            text: None,
-            cursors: None,
+            text: "".to_owned(),
+            cursors: vec![],
             styles: vec![],
             is_valid: true,
         }
@@ -42,7 +45,7 @@ impl Line {
     }
 
     pub fn render<W: Write>(&self, w: &mut W, lineno: u16) -> Result<()> {
-        let mut line = self.text.as_ref().cloned().unwrap_or_default();
+        let mut line = self.text.clone();
         self.trim_new_line(&mut line);
         self.add_styles(&mut line)?;
         write!(w, "{}{}{}", cursor::Goto(1, lineno), clear::CurrentLine, line)
@@ -68,7 +71,7 @@ impl Line {
         let mut style_idx = 0;
         loop {
             let start = self.styles[style_idx] as usize;
-            let mut end = start + self.styles[style_idx + 1] as usize;
+            let end = start + self.styles[style_idx + 1] as usize;
 
             if end >= text.len() {
                 text.push_str(&format!("{}", termion::style::Reset));
