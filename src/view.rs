@@ -48,6 +48,9 @@ impl View {
         self.window.update(&self.cursor.clone());
     }
 
+    pub fn get_window(&self) -> (u64, u64) {
+        (self.window.start(), self.window.end())
+    }
 
     pub fn render<W: Write>(&mut self, w: &mut W, height: u16) -> Result<()> {
         self.window.resize(height);
