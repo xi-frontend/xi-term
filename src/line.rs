@@ -1,11 +1,10 @@
 use std::io::Write;
 use std::default::Default;
 
+use termion;
 use termion::clear;
 use termion::cursor;
-use termion::style;
 
-use cursor::Cursor;
 use errors::*;
 
 fn _return_true() -> bool {
@@ -14,10 +13,13 @@ fn _return_true() -> bool {
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct Line {
-    pub text: Option<String>,
+    #[serde(default)]
+    pub text: String,
+    #[serde(default)]
     #[serde(rename="cursor")]
-    pub cursors: Option<Vec<u64>>,
-    pub styles: Option<Vec<i64>>,
+    pub cursors: Vec<u64>,
+    #[serde(default)]
+    pub styles: Vec<i64>,
     #[serde(default="_return_true")]
     #[serde(skip_deserializing)]
     pub is_valid: bool,
@@ -26,9 +28,9 @@ pub struct Line {
 impl Default for Line {
     fn default() -> Line {
         Line {
-            text: None,
-            cursors: None,
-            styles: None,
+            text: "".to_owned(),
+            cursors: vec![],
+            styles: vec![],
             is_valid: true,
         }
     }
@@ -42,11 +44,10 @@ impl Line {
         }
     }
 
-    pub fn render<W: Write>(&self, w: &mut W, lineno: u16, cursor: Option<&Cursor>) -> Result<()> {
-        let mut line = self.text.as_ref().cloned().unwrap_or_default();
-
+    pub fn render<W: Write>(&self, w: &mut W, lineno: u16) -> Result<()> {
+        let mut line = self.text.clone();
         self.trim_new_line(&mut line);
-        self.insert_cursors(&mut line, cursor);
+        self.add_styles(&mut line)?;
         write!(w, "{}{}{}", cursor::Goto(1, lineno), clear::CurrentLine, line)
             .chain_err(|| ErrorKind::DisplayError)?;
         w.flush().chain_err(|| ErrorKind::DisplayError)?;
@@ -59,30 +60,31 @@ impl Line {
         }
     }
 
-    fn insert_cursors(&self, text: &mut String, real_cursor: Option<&Cursor>) {
-        if let Some(ref cursors) = self.cursors {
-            for idx in cursors.iter().rev() {
-                let idx = *idx;
-                // If this cursor is the real cursor we don't want to draw it.
-                // We skip it, and the cursor will be set here later.
-                if let Some(real_cursor) = real_cursor {
-                    if real_cursor.column == idx {
-                        continue;
-                    }
-                }
+    fn add_styles(&self, text: &mut String) -> Result<()> {
+        if self.styles.is_empty() {
+            return Ok(());
+        }
+        if self.styles.len() % 3 != 0 {
+            error!("Invalid style array (should be a multiple of 3)");
+            bail!(ErrorKind::DisplayError);
+        }
+        let mut style_idx = 0;
+        loop {
+            let start = self.styles[style_idx] as usize;
+            let end = start + self.styles[style_idx + 1] as usize;
 
-                // Make sure the cursor is within the bounds of the string by adding some padding.
-                // Note that if this happens, it can only happen for the right-most cursor.
-                if idx as usize + 1 > text.len() {
-                    for _ in 0..idx as usize + 1 - text.len() {
-                        text.push(' ');
-                    }
-                }
+            if end >= text.len() {
+                text.push_str(&format!("{}", termion::style::Reset));
+            } else {
+                text.insert_str(end, &format!("{}", termion::style::Reset));
+            }
+            text.insert_str(start, &format!("{}", termion::style::Invert));
 
-                // Insert the "cursor".
-                text.insert_str(idx as usize + 1, &format!("{}", style::Reset));
-                text.insert_str(idx as usize, &format!("{}", style::Invert));
+            style_idx += 3;
+            if style_idx >= self.styles.len() {
+                break;
             }
         }
+        Ok(())
     }
 }

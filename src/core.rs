@@ -304,11 +304,25 @@ impl Core {
     }
 
     pub fn click(&mut self, line: u64, column: u64) -> Result<()> {
-        self.call_edit("click", Some(json!([line, column, 0, 1])))
+        let lineno: u64;
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            lineno = line + view.get_window().0;
+        } else {
+            error!("View {} not found", &self.current_view);
+            bail!(ErrorKind::UpdateError);
+        }
+        self.call_edit("click", Some(json!([lineno, column, 0, 1])))
     }
 
     pub fn drag(&mut self, line: u64, column: u64) -> Result<()> {
-        self.call_edit("drag", Some(json!([line, column, 0, 1])))
+        let lineno: u64;
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            lineno = line + view.get_window().0;
+        } else {
+            error!("View {} not found", &self.current_view);
+            bail!(ErrorKind::UpdateError);
+        }
+        self.call_edit("drag", Some(json!([lineno, column, 0, 1])))
     }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]

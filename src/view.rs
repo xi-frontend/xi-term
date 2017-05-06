@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::collections::HashMap;
 
 use termion::clear;
 use termion::cursor;
@@ -6,6 +7,7 @@ use termion::cursor;
 use cache::LineCache;
 use cursor::Cursor;
 use errors::*;
+use style::Style;
 use update::Update;
 use window::Window;
 
@@ -18,6 +20,7 @@ pub struct View {
     cache: LineCache,
     cursor: Cursor,
     window: Window,
+    styles: HashMap<u16, Style>,
 }
 
 impl View {
@@ -28,7 +31,12 @@ impl View {
             cache: LineCache::new(),
             cursor: Cursor::new(),
             window: Window::new(),
+            styles: HashMap::new(),
         }
+    }
+
+    pub fn set_style(&mut self, style: Style) {
+        self.styles.insert(style.id, style);
     }
 
     pub fn update_lines(&mut self, update: &Update) -> Result<()> {
@@ -40,6 +48,9 @@ impl View {
         self.window.update(&self.cursor.clone());
     }
 
+    pub fn get_window(&self) -> (u64, u64) {
+        (self.window.start(), self.window.end())
+    }
 
     pub fn render<W: Write>(&mut self, w: &mut W, height: u16) -> Result<()> {
         self.window.resize(height);
@@ -83,13 +94,7 @@ impl View {
                     ErrorKind::DisplayError
                 })?;
 
-            // Lines are drawn with fake cursors.
-            // We set the actual cursor later, redrawing the line in the process.
-            if lineno as u64 + self.window.start() == self.cursor.line {
-                line.render(w, line_pos + 1, Some(&self.cursor))?;
-            } else {
-                line.render(w, line_pos + 1, None)?;
-            }
+            line.render(w, line_pos + 1)?;
         }
         Ok(())
     }
@@ -125,9 +130,6 @@ impl View {
         // tabs, and we assume the terminal has tabstops of TAB_LENGTH. We consider that all the
         // other characters have a width of 1.
         let column = line.text
-            .as_ref()
-            .map(|s| &**s)
-            .unwrap_or("")
             .chars()
             .take(self.cursor.column as usize)
             .fold(0, add_char_width);
