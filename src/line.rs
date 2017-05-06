@@ -62,9 +62,7 @@ impl Line {
             return Ok(());
         }
         if self.styles.len() % 3 != 0 {
-            // FIXME: find a more descriptive error for this. Hopefully, this should not happen
-            // though.
-            error!("Invalid style");
+            error!("Invalid style array (should be a multiple of 3)");
             bail!(ErrorKind::DisplayError);
         }
         let mut style_idx = 0;
@@ -72,16 +70,7 @@ impl Line {
             let start = self.styles[style_idx] as usize;
             let mut end = start + self.styles[style_idx + 1] as usize;
 
-            if end > text.len() {
-                // XXX: when dragging to a line below, xi-core sends a style that ends 1 index
-                // after the end of the string. I think it considers the \n as a character, but we
-                // remove it when rendering the line. Not sure if this is a bug. Should talk about
-                // that on IRC.
-                error!("style ends after the end of the line ({} > {})", end, text.len());
-                end = text.len();
-            }
-
-            if end == text.len() {
+            if end >= text.len() {
                 text.push_str(&format!("{}", termion::style::Reset));
             } else {
                 text.insert_str(end, &format!("{}", termion::style::Reset));
