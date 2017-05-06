@@ -3,15 +3,18 @@ use std::io::stdin;
 use std::sync::mpsc;
 use std::thread;
 
-use termion;
+use termion::event::Event;
+use termion::event::Key;
+use termion::event::MouseButton;
+use termion::event::MouseEvent;
 use termion::input::TermRead;
 
 use core::Core;
 use errors::*;
 
 pub struct Input {
-    tx: mpsc::Sender<termion::event::Event>,
-    rx: mpsc::Receiver<termion::event::Event>,
+    tx: mpsc::Sender<Event>,
+    rx: mpsc::Receiver<Event>,
 }
 
 impl Input {
@@ -39,19 +42,19 @@ impl Input {
         });
     }
 
-    pub fn try_recv(&mut self) -> ::std::result::Result<termion::event::Event, mpsc::TryRecvError> {
+    pub fn try_recv(&mut self) -> ::std::result::Result<Event, mpsc::TryRecvError> {
         self.rx.try_recv()
     }
 }
 
-pub fn handle(event: &termion::event::Event, core: &mut Core) -> Result<()> {
+pub fn handle(event: &Event, core: &mut Core) -> Result<()> {
     match *event {
-        termion::event::Event::Key(key) => {
+        Event::Key(key) => {
             match key {
-                termion::event::Key::Char(c) => {
+                Key::Char(c) => {
                     core.char(c)?;
                 }
-                termion::event::Key::Ctrl(c) => {
+                Key::Ctrl(c) => {
                     match c {
                         'c' => {
                             info!("received ^C: exiting");
@@ -66,25 +69,25 @@ pub fn handle(event: &termion::event::Event, core: &mut Core) -> Result<()> {
                         }
                     }
                 }
-                termion::event::Key::Backspace => {
+                Key::Backspace => {
                     core.del()?;
                 }
-                termion::event::Key::Left => {
+                Key::Left => {
                     core.left()?;
                 }
-                termion::event::Key::Right => {
+                Key::Right => {
                     core.right()?;
                 }
-                termion::event::Key::Up => {
+                Key::Up => {
                     core.up()?;
                 }
-                termion::event::Key::Down => {
+                Key::Down => {
                     core.down()?;
                 }
-                termion::event::Key::PageUp => {
+                Key::PageUp => {
                     core.page_up()?;
                 }
-                termion::event::Key::PageDown => {
+                Key::PageDown => {
                     core.page_down()?;
                 }
                 _ => {
@@ -93,13 +96,24 @@ pub fn handle(event: &termion::event::Event, core: &mut Core) -> Result<()> {
                 }
             }
         }
-        termion::event::Event::Mouse(e) => {
-            match e {
-                termion::event::MouseEvent::Press(_, y, x) => {
-                    core.click(x as u64 - 1, y as u64 - 1)?;
+        Event::Mouse(mouse_event) => {
+            match mouse_event {
+                MouseEvent::Press(press_event, y, x) => {
+                    match press_event {
+                        MouseButton::Left => {
+                            core.click(x as u64 - 1, y as u64 - 1)?;
+                        }
+                        MouseButton::WheelUp => {
+                            core.up()?;
+                        }
+                        MouseButton::WheelDown => {
+                            core.down()?;
+                        }
+                        _ => {}
+                    }
                 }
-                termion::event::MouseEvent::Release(..) => {}
-                termion::event::MouseEvent::Hold(y, x) => {
+                MouseEvent::Release(..) => {}
+                MouseEvent::Hold(y, x) => {
                     core.drag(x as u64 - 1, y as u64 - 1)?;
                 }
             }
