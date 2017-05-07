@@ -52,9 +52,7 @@ impl View {
         (self.window.start(), self.window.end())
     }
 
-    pub fn render<W: Write>(&mut self, w: &mut W, height: u16) -> Result<()> {
-        self.window.resize(height);
-
+    pub fn render<W: Write>(&mut self, w: &mut W) -> Result<()> {
         if self.cache.is_dirty() || self.window.is_dirty() {
             write!(w, "{}{}", cursor::Goto(1, 1), clear::All)
                 .chain_err(|| ErrorKind::DisplayError)?;
@@ -67,6 +65,13 @@ impl View {
         self.render_cursor(w)?;
 
         Ok(())
+    }
+
+    pub fn resize(&mut self, height: u16) -> bool {
+        let cursor_line = self.cursor.line;
+        let nb_lines = self.cache.lines().len() as u64;
+        self.window.resize(height, cursor_line, nb_lines);
+        self.window.is_dirty()
     }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]

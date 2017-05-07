@@ -26,7 +26,7 @@ error_chain! {
             description("cannot handle input")
             display("cannot handle input")
         }
-        TerminalSize {
+        TerminalSizeError {
             description("cannot determine terminal size")
             display("cannot determine terminal size")
         }
