@@ -303,6 +303,18 @@ impl Core {
         self.call_edit("scroll", Some(json!([start, end])))
     }
 
+    pub fn resize(&mut self, height: u16) -> Result<()> {
+        let scroll_region: (u64, u64);
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.resize(height);
+            scroll_region = view.get_window();
+        } else {
+            error!("View {} not found", &self.current_view);
+            bail!(ErrorKind::UpdateError);
+        }
+        self.scroll(scroll_region.0, scroll_region.1)
+    }
+
     pub fn click(&mut self, line: u64, column: u64) -> Result<()> {
         let lineno: u64;
         if let Some(view) = self.views.get_mut(&self.current_view) {

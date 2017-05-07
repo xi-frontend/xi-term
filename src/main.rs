@@ -75,9 +75,20 @@ fn run() -> Result<()> {
     input.run();
     screen.init()?;
     core.open(file)?;
-    core.scroll(0, screen.height() as u64)?;
-
     loop {
+        match screen.resize() {
+            Ok(Some(new_size)) => {
+                info!("screen height changed. Notifying the core");
+                core.resize(new_size.1)?;
+                screen.schedule_update();
+            }
+            Err(e) => {
+                error!("failed to get new screen size");
+                log_error(&e);
+            }
+            _ => {}
+        }
+
         if let Ok(event) = input.try_recv() {
             if let Err(e) = input::handle(&event, &mut core) {
                 log_error(&e);
