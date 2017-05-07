@@ -26,9 +26,20 @@ impl Screen {
     pub fn new() -> Result<Screen> {
         let stdout = MouseTerminal::from(AlternateScreen::from(stdout().into_raw_mode()?));
         Ok(Screen {
-               size: termion::terminal_size()?,
+               size: termion::terminal_size().chain_err(|| ErrorKind::TerminalSize)?,
                stdout: stdout,
            })
+    }
+
+    /// Update the terminal size and return `true` if the height changed, and false otherwise.
+    pub fn resize(&mut self) -> Result<Option<(u16, u16)>> {
+        let new_size = termion::terminal_size()?;
+        if self.size.1 == new_size.1 {
+            Ok(None)
+        } else {
+            self.size = new_size;
+            Ok(Some(self.size))
+        }
     }
 
     pub fn init(&mut self) -> Result<()> {
@@ -40,9 +51,16 @@ impl Screen {
         Ok(())
     }
 
+    pub fn force_update(&mut self, core: &mut Core) -> Result<()> {
+        core.get_view_mut()
+            .ok_or_else(|| {
+                error!("No view found");
+                ErrorKind::DisplayError
+            })?
+        .render(&mut self.stdout, self.size.1)
+    }
+
     pub fn update(&mut self, core: &mut Core) -> Result<()> {
-        // TODO(#27): check if terminal size changed. If so, send a `render_line` command to the
-        // backend, and a `scroll` command for future updates.
         if let Ok(msg) = core.update_rx.try_recv() {
             let msg_list = msg.as_array().unwrap();
             let (method, params) = (msg_list[0].as_str().unwrap(),

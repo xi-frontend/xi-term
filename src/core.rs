@@ -303,6 +303,29 @@ impl Core {
         self.call_edit("scroll", Some(json!([start, end])))
     }
 
+    pub fn resize(&mut self, height: u16) -> Result<()> {
+        let window = self.get_view().unwrap().get_window();
+
+        // we have no way to know if the screen was resized from the top or the bottom, so we
+        // balance the change between both end.
+        // basically we want:
+        //  1) new_height = new_end - new_start
+        //  2) new_end - old_end = new_start - old_start
+        // which leads to:
+        //  1) new_end = (new_height + old_start + old_end) / 2
+        //  2) new_start = (old_start + old_end - new_height) / 2
+        //
+        // we just to handle corner cases since we're working with unsigned integer.
+
+        let new_start = if height as u64 > window.0 + window.1 {
+            0
+        } else {
+            (window.0 + window.1 - height as u64) / 2
+        };
+        let new_end = new_start + height as u64;
+        self.call_edit("scroll", Some(json!([new_start, new_end])))
+    }
+
     pub fn click(&mut self, line: u64, column: u64) -> Result<()> {
         let lineno: u64;
         if let Some(view) = self.views.get_mut(&self.current_view) {
