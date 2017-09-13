@@ -101,7 +101,7 @@ pub fn handle(event: &Event, core: &mut Core) -> Result<()> {
                 MouseEvent::Press(press_event, y, x) => {
                     match press_event {
                         MouseButton::Left => {
-                            core.click(x as u64 - 1, y as u64 - 1)?;
+                            core.click(u64::from(x) - 1, u64::from(y) - 1)?;
                         }
                         MouseButton::WheelUp => {
                             core.up()?;
@@ -114,7 +114,7 @@ pub fn handle(event: &Event, core: &mut Core) -> Result<()> {
                 }
                 MouseEvent::Release(..) => {}
                 MouseEvent::Hold(y, x) => {
-                    core.drag(x as u64 - 1, y as u64 - 1)?;
+                    core.drag(u64::from(x) - 1, u64::from(y) - 1)?;
                 }
             }
         }

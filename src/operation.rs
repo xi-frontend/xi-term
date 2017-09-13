@@ -47,8 +47,8 @@ impl Operation {
                 let new_ix = old_ix + self.nb_lines;
                 debug!("copying line {} to {}", old_ix, new_ix);
 
-                for i in old_ix..new_ix {
-                    new_lines.push(old_lines[i as usize].clone());
+                for old_line in &old_lines[old_ix as usize..new_ix as usize] {
+                    new_lines.push(old_line.clone());
                 }
                 Ok(new_ix)
             }
