@@ -39,6 +39,9 @@ use core::Core;
 use errors::*;
 use input::Input;
 use screen::Screen;
+use log::LogLevelFilter;
+use log4rs::append::file::FileAppender;
+use log4rs::config::{Appender, Config, Logger, Root};
 
 fn main() {
     if let Err(ref e) = run() {
@@ -58,17 +61,30 @@ fn main() {
     }
 }
 
+fn configure_logs(logfile: &str) {
+    let file_appender = FileAppender::builder().build(logfile).unwrap();
+    let config = Config::builder()
+        .appender(Appender::builder().build("file", Box::new(file_appender)))
+        .logger(Logger::builder().build("xi_tui::core", LogLevelFilter::Debug))
+        .logger(Logger::builder().build("xi_tui::main", LogLevelFilter::Debug))
+        .build(Root::builder().appender("file").build(LogLevelFilter::Info))
+        .unwrap();
+    let _ = log4rs::init_config(config).unwrap();
+}
 fn run() -> Result<()> {
-    log4rs::init_file("log_config.yaml", Default::default()).unwrap();
     let xi = clap_app!(
         xi =>
         (about: "The Xi Editor")
         (@arg core: -c --core +takes_value "Specify binary to use for the backend")
+        (@arg logfile: -l --log-file +takes_value "Log file location")
         (@arg file: +required "File to edit"));
 
     let matches = xi.get_matches();
     let core_exe = matches.value_of("core").unwrap_or("xi-core");
+    let logfile = matches.value_of("logfile").unwrap_or("xi-tui.log");
     let file = matches.value_of("file").unwrap();
+
+    configure_logs(logfile);
     let mut core = Core::new(core_exe);
     let mut screen = Screen::new()?;
     let mut input = Input::new();
