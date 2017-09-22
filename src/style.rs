@@ -12,5 +12,5 @@ pub struct Style {
     pub weight: Option<u16>,
 
     /// default false
-    pub italic: Option<bool>
+    pub italic: Option<bool>,
 }

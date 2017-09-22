@@ -74,7 +74,6 @@ impl View {
         self.window.is_dirty()
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn render_lines<W: Write>(&self, w: &mut W) -> Result<()> {
         debug!("Rendering lines");
 
@@ -104,11 +103,13 @@ impl View {
         Ok(())
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn render_cursor<W: Write>(&self, w: &mut W) -> Result<()> {
         debug!("Rendering cursor");
         if !self.window.is_within_window(self.cursor.line) {
-            error!("Cursor is on line {} which is not within the displayed window", self.cursor.line);
+            error!(
+                "Cursor is on line {} which is not within the displayed window",
+                self.cursor.line
+            );
             bail!(ErrorKind::DisplayError)
         }
 
@@ -123,12 +124,10 @@ impl View {
             })?;
 
         // Get the line vertical offset so that we know where to draw it.
-        let line_pos = self.window
-            .offset(self.cursor.line)
-            .ok_or_else(|| {
-                error!("Could not find line position within the window: {:?}", line);
-                ErrorKind::DisplayError
-            })?;
+        let line_pos = self.window.offset(self.cursor.line).ok_or_else(|| {
+            error!("Could not find line position within the window: {:?}", line);
+            ErrorKind::DisplayError
+        })?;
 
         // Calculate the cursor position on the line. The trick is that we know the position within
         // the string, but characters may have various lengths. For the moment, we only handle
@@ -141,8 +140,7 @@ impl View {
 
         // Draw the cursor
         let cursor_pos = cursor::Goto(column as u16 + 1, line_pos + 1);
-        write!(w, "{}", cursor_pos)
-            .chain_err(|| ErrorKind::DisplayError)?;
+        write!(w, "{}", cursor_pos).chain_err(|| ErrorKind::DisplayError)?;
         debug!("Cursor set at line {} column {}", line_pos, column);
         w.flush().chain_err(|| ErrorKind::DisplayError)?;
 

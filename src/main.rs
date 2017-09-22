@@ -1,6 +1,6 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", deny(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", deny(clippy))]
 
 #[macro_use]
 extern crate clap;
@@ -8,9 +8,9 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 
+extern crate log4rs;
 #[macro_use]
 extern crate log;
-extern crate log4rs;
 
 extern crate serde;
 #[macro_use]

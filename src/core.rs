@@ -25,7 +25,6 @@ pub struct Core {
 }
 
 impl Core {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn new(executable: &str) -> Core {
         // spawn the core process
         let process = Command::new(executable)
@@ -50,12 +49,16 @@ impl Core {
                 let req = data.as_object().unwrap();
 
                 if let (Some(id), Some(result)) = (req.get("id"), req.get("result")) {
-                    rpc_tx.send((id.as_u64().unwrap(), Ok(result.clone()))).unwrap();
+                    rpc_tx
+                        .send((id.as_u64().unwrap(), Ok(result.clone())))
+                        .unwrap();
                     continue;
                 }
 
                 if let (Some(error), Some(id)) = (req.get("error"), req.get("id")) {
-                    rpc_tx.send((id.as_u64().unwrap(), Err(error.clone()))).unwrap();
+                    rpc_tx
+                        .send((id.as_u64().unwrap(), Err(error.clone())))
+                        .unwrap();
                     continue;
                 }
 
@@ -72,7 +75,6 @@ impl Core {
                 }
 
                 error!("Unhandled core request");
-
             } else {
                 error!("Could deserialize core output as a json object");
             }
@@ -157,25 +159,20 @@ impl Core {
     }
 
     /// Serialize JSON object and send it to the server
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn send(&mut self, message: &Value) -> Result<()> {
-        let mut str_msg = serde_json::to_string(&message)
-            .chain_err(|| {
-                error!("could not serialize the message to send");
-                ErrorKind::RpcError
-            })?;
+        let mut str_msg = serde_json::to_string(&message).chain_err(|| {
+            error!("could not serialize the message to send");
+            ErrorKind::RpcError
+        })?;
         info!(">>> {}", &str_msg);
         str_msg.push('\n');
-        self.stdin
-            .write_all(str_msg.as_bytes())
-            .chain_err(|| {
-                error!("could not write the message to send");
-                ErrorKind::RpcError
-            })?;
+        self.stdin.write_all(str_msg.as_bytes()).chain_err(|| {
+            error!("could not write the message to send");
+            ErrorKind::RpcError
+        })?;
         Ok(())
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn call_sync(&mut self, method: &str, params: Value) -> Result<Value> {
         let i = self.request(method, params)?;
         let (id, result) = self.rpc_rx.recv().unwrap();
@@ -206,11 +203,10 @@ impl Core {
         self.call_sync("edit", msg)
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn new_view(&mut self, file_path: Option<String>) -> Result<String> {
         let msg: Value;
         if let Some(file_path) = file_path {
-            msg = json!({"file_path": file_path});
+            msg = json!({ "file_path": file_path });
         } else {
             msg = json!({});
         }
@@ -296,7 +292,7 @@ impl Core {
     }
 
     pub fn char(&mut self, ch: char) -> Result<()> {
-        self.call_edit("insert", Some(json!({"chars": ch})))
+        self.call_edit("insert", Some(json!({ "chars": ch })))
     }
 
     pub fn scroll(&mut self, start: u64, end: u64) -> Result<()> {
@@ -337,7 +333,6 @@ impl Core {
         self.call_edit("drag", Some(json!([lineno, column, 0, 1])))
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn copy(&mut self) -> Result<String> {
         self.call_edit_sync("copy", None)?
             .as_str()
@@ -348,7 +343,6 @@ impl Core {
             })
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn cut(&mut self) -> Result<String> {
         self.call_edit_sync("cut", None)?
             .as_str()
@@ -360,7 +354,7 @@ impl Core {
     }
 
     pub fn paste(&mut self, s: String) -> Result<()> {
-        self.call_edit("insert", Some(json!({"chars": s})))
+        self.call_edit("insert", Some(json!({ "chars": s })))
     }
 
     pub fn open(&mut self, filename: &str) -> Result<()> {

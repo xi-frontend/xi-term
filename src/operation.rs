@@ -15,16 +15,16 @@ pub enum OperationType {
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct Operation {
-    #[serde(rename="op")]
-    #[serde(deserialize_with="deserialize_operation_type")]
+    #[serde(rename = "op")]
+    #[serde(deserialize_with = "deserialize_operation_type")]
     pub operation_type: OperationType,
-    #[serde(rename="n")]
-    pub nb_lines: u64,
+    #[serde(rename = "n")] pub nb_lines: u64,
     pub lines: Option<Vec<Line>>,
 }
 
 fn deserialize_operation_type<'de, D>(de: D) -> ::std::result::Result<OperationType, D::Error>
-    where D: serde::Deserializer<'de>
+where
+    D: serde::Deserializer<'de>,
 {
     let value: json::Value = try!(serde::Deserialize::deserialize(de));
     match value {
@@ -33,7 +33,9 @@ fn deserialize_operation_type<'de, D>(de: D) -> ::std::result::Result<OperationT
         json::Value::String(ref s) if &*s == "invalidate" => Ok(OperationType::Invalidate),
         json::Value::String(ref s) if &*s == "update" => Ok(OperationType::Update),
         json::Value::String(ref s) if &*s == "ins" => Ok(OperationType::Insert),
-        _ => Err(serde::de::Error::custom("Unexpected value for operation type")),
+        _ => Err(serde::de::Error::custom(
+            "Unexpected value for operation type",
+        )),
     }
 }
 
@@ -85,7 +87,6 @@ impl Operation {
 }
 
 #[test]
-#[cfg_attr(rustfmt, rustfmt_skip)]
 fn deserialize_operation_from_value() {
     use serde_json;
 
@@ -103,8 +104,17 @@ fn deserialize_operation_from_value() {
         operation_type: OperationType::Invalidate,
         nb_lines: 60,
         lines: Some(vec![
-            Line { cursor: Some(vec![0]), styles: Some(vec![]), text: Some("foo".to_owned()) },
-            Line { cursor: None, styles: Some(vec![]), text: Some("".to_owned()) }]),
+            Line {
+                cursor: Some(vec![0]),
+                styles: Some(vec![]),
+                text: Some("foo".to_owned()),
+            },
+            Line {
+                cursor: None,
+                styles: Some(vec![]),
+                text: Some("".to_owned()),
+            },
+        ]),
     };
     let deserialized: Result<Operation, _> = serde_json::from_value(value);
     assert_eq!(deserialized.unwrap(), operation);
@@ -129,8 +139,17 @@ fn deserialize_operation() {
         operation_type: OperationType::Invalidate,
         nb_lines: 60,
         lines: Some(vec![
-            Line { cursor: Some(vec![0]), styles: Some(vec![]), text: Some("foo".to_owned()) },
-            Line { cursor: None, styles: Some(vec![]), text: Some("".to_owned()) }]),
+            Line {
+                cursor: Some(vec![0]),
+                styles: Some(vec![]),
+                text: Some("foo".to_owned()),
+            },
+            Line {
+                cursor: None,
+                styles: Some(vec![]),
+                text: Some("".to_owned()),
+            },
+        ]),
     };
     let deserialized: Result<Operation, _> = serde_json::from_str(s);
     assert_eq!(deserialized.unwrap(), operation);

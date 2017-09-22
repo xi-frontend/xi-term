@@ -20,7 +20,7 @@ use errors::*;
 pub struct Screen {
     pub stdout: MouseTerminal<AlternateScreen<RawTerminal<std::io::Stdout>>>,
     pub size: (u16, u16),
-    update_scheduled: bool
+    update_scheduled: bool,
 }
 
 impl Screen {
@@ -51,17 +51,17 @@ impl Screen {
     pub fn init(&mut self) -> Result<()> {
         write!(self.stdout, "{}{}", clear::All, cursor::Up(self.size.1))
             .chain_err(|| ErrorKind::DisplayError)?;
-        self.stdout
-            .flush()
-            .chain_err(|| ErrorKind::DisplayError)?;
+        self.stdout.flush().chain_err(|| ErrorKind::DisplayError)?;
         Ok(())
     }
 
     pub fn update(&mut self, core: &mut Core) -> Result<()> {
         if let Ok(msg) = core.update_rx.try_recv() {
             let msg_list = msg.as_array().unwrap();
-            let (method, params) = (msg_list[0].as_str().unwrap(),
-                                    msg_list[1].as_object().unwrap());
+            let (method, params) = (
+                msg_list[0].as_str().unwrap(),
+                msg_list[1].as_object().unwrap(),
+            );
             match method {
                 "update" => {
                     let update = serde_json::from_value(params.get("update").unwrap().clone())?;
@@ -70,13 +70,16 @@ impl Screen {
                 }
                 "scroll_to" => {
                     // Deserialize the cursor position, and let the core update the view.
-                    let coord = (params.get("line").unwrap().as_u64().unwrap(),
-                                 params.get("col").unwrap().as_u64().unwrap());
+                    let coord = (
+                        params.get("line").unwrap().as_u64().unwrap(),
+                        params.get("col").unwrap().as_u64().unwrap(),
+                    );
                     core.scroll_to(coord)?;
                     self.schedule_update();
                 }
                 "set_style" => {
-                    let style: Style = serde_json::from_value(params.get("set_style").unwrap().clone())?;
+                    let style: Style =
+                        serde_json::from_value(params.get("set_style").unwrap().clone())?;
                     core.get_view_mut()
                         .ok_or_else(|| {
                             error!("No view found");
@@ -103,5 +106,4 @@ impl Screen {
         }
         Ok(())
     }
-
 }
