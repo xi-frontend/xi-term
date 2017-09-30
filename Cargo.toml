@@ -4,16 +4,17 @@ name = "xi-tui"
 version = "0.1.0"
 
 [dependencies]
-clap = "2.26"
-error-chain = "0.11"
-jsonrpc-core = "7.1"
-log = "0.3"
-log4rs = "0.7"
-serde = "1.0"
-serde_derive = "1.0"
-serde_json = "1.0"
-termion = "1.5"
+clap = "2.26.2"
+error-chain = "0.11.0"
+futures = "0.1.16"
+log = "0.3.8"
+log4rs = "0.7.0"
+termion = "1.5.1"
+tokio-core = "0.1.10"
 
 [dependencies.clippy]
 optional = true
-version = "*"
+version = "0.0.165"
+
+[dependencies.xrl]
+git = "https://github.com/little-dude/xrl"
