@@ -19,7 +19,7 @@ cargo install
 # places binaries). In your .bashrc (or equivalent), add `export PATH=$PATH:~/.cargo/bin`
 ```
 
-Then you can clone this repository and run the frontend with `cargo run
+Then you can clone this repository and run the frontend with `cargo run -- 
 <your_file>`. `your_file` can be an existing file or any dummy name.
 
 ## Caveats

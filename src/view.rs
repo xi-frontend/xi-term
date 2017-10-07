@@ -1,133 +1,191 @@
 use std::io::Write;
 use std::collections::HashMap;
 
-use termion::clear;
-use termion::cursor;
+use xrl::{Line, Update};
+use termion::clear::CurrentLine as ClearLine;
+use termion::cursor::Goto;
 
 use cache::LineCache;
-use cursor::Cursor;
-use errors::*;
-use style::Style;
-use update::Update;
+use termion;
 use window::Window;
+use xrl::Style;
+
+use errors::*;
 
 const TAB_LENGTH: u16 = 4;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Default)]
+pub struct Cursor {
+    pub line: u64,
+    pub column: u64,
+}
+
+
+#[derive(Debug)]
 pub struct View {
-    last_rev: u64,
-    pub filepath: String,
     cache: LineCache,
     cursor: Cursor,
     window: Window,
-    styles: HashMap<u16, Style>,
 }
 
 impl View {
-    pub fn new(filepath: &str) -> View {
+    pub fn new() -> View {
         View {
-            last_rev: 0,
-            filepath: filepath.to_owned(),
             cache: LineCache::new(),
-            cursor: Cursor::new(),
+            cursor: Default::default(),
             window: Window::new(),
-            styles: HashMap::new(),
         }
     }
 
-    pub fn set_style(&mut self, style: Style) {
-        self.styles.insert(style.id, style);
-    }
-
-    pub fn update_lines(&mut self, update: &Update) -> Result<()> {
+    pub fn update_cache(&mut self, update: Update) {
+        info!("updating cache");
         self.cache.update(update)
     }
 
-    pub fn update_cursor(&mut self, cursor_pos: (u64, u64)) {
-        self.cursor.update(cursor_pos);
-        self.window.update(&self.cursor.clone());
+    pub fn set_cursor(&mut self, line: u64, column: u64) {
+        self.cursor = Cursor {
+            line: line,
+            column: column,
+        };
+        self.window.update(&self.cursor);
     }
 
-    pub fn get_window(&self) -> (u64, u64) {
-        (self.window.start(), self.window.end())
-    }
-
-    pub fn render<W: Write>(&mut self, w: &mut W) -> Result<()> {
-        if self.cache.is_dirty() || self.window.is_dirty() {
-            write!(w, "{}{}", cursor::Goto(1, 1), clear::All)
-                .chain_err(|| ErrorKind::DisplayError)?;
-
-            self.render_lines(w)?;
-            self.cache.mark_clean();
-            self.window.mark_clean();
-        }
-
-        self.render_cursor(w)?;
-
+    pub fn render<W: Write>(&mut self, w: &mut W, styles: &HashMap<u64, Style>) -> Result<()> {
+        self.render_lines(w, styles)?;
+        self.render_cursor(w);
         Ok(())
     }
 
-    pub fn resize(&mut self, height: u16) -> bool {
-        let cursor_line = self.cursor.line;
-        let nb_lines = self.cache.lines().len() as u64;
+    pub fn resize(&mut self, height: u16) {
+        if self.cursor.line < self.cache.invalid_before {
+            error!(
+                "cursor is on line {} but there are {} invalid lines in cache. Panicking.",
+                self.cursor.line,
+                self.cache.invalid_before
+            );
+            panic!();
+        }
+        let cursor_line = self.cursor.line - self.cache.invalid_before;
+        let nb_lines = self.cache.lines.len() as u64;
         self.window.resize(height, cursor_line, nb_lines);
-        self.window.is_dirty()
     }
 
-    fn render_lines<W: Write>(&self, w: &mut W) -> Result<()> {
-        debug!("Rendering lines");
+    pub fn click(&self, x: u64, y: u64) -> (u64, u64) {
+        let lineno = x + self.cache.invalid_before + self.window.start();
+        if let Some(line) = self.cache.lines.get(x as usize) {
+            if y == 0 {
+                return (lineno, 0);
+            }
+            let mut text_len: u16 = 0;
+            for (idx, c) in line.text.chars().enumerate() {
+                text_len = add_char_width(text_len, c);
+                if u64::from(text_len) >= y {
+                    return (lineno as u64, idx as u64 + 1);
+                }
+            }
+            return (lineno, line.text.len() as u64 + 1);
+        } else {
+            warn!("no line at index {} found in cache", x);
+            return (x, y);
+        }
+    }
+
+    fn render_lines<W: Write>(&self, w: &mut W, styles: &HashMap<u64, Style>) -> Result<()> {
+        debug!("rendering lines");
+        trace!("current cache\n{:?}", self.cache);
 
         // Get the lines that are within the displayed window
         let lines = self.cache
-            .lines()
+            .lines
             .iter()
             .skip(self.window.start() as usize)
             .take(self.window.size() as usize);
 
         // Draw the valid lines within this range
         for (lineno, line) in lines.enumerate() {
-            if !line.is_valid {
-                continue;
-            }
-
-            // Get the line vertical offset so that we know where to draw it.
-            let line_pos = self.window
-                .offset(self.window.start() + lineno as u64)
-                .ok_or_else(|| {
-                    error!("Could not find line position within the window");
-                    ErrorKind::DisplayError
-                })?;
-
-            line.render(w, line_pos + 1)?;
+            self.render_line(w, line, lineno, styles);
         }
         Ok(())
     }
 
-    pub fn render_cursor<W: Write>(&self, w: &mut W) -> Result<()> {
-        debug!("Rendering cursor");
-        if !self.window.is_within_window(self.cursor.line) {
-            error!(
-                "Cursor is on line {} which is not within the displayed window",
-                self.cursor.line
-            );
-            bail!(ErrorKind::DisplayError)
+    fn render_line<W: Write>(
+        &self,
+        w: &mut W,
+        line: &Line,
+        lineno: usize,
+        styles: &HashMap<u64, Style>,
+    ) {
+        let text = self.add_styles(styles, line);
+        if let Err(e) = write!(w, "{}{}{}", Goto(1, lineno as u16 + 1), ClearLine, &text) {
+            error!("failed to render line: {}", e);
+        }
+    }
+
+    fn add_styles(&self, styles: &HashMap<u64, Style>, line: &Line) -> String {
+        let mut text = line.text.clone();
+        if line.styles.is_empty() {
+            return text;
+        }
+        for style_def in &line.styles {
+            // not used yet because we only have the default style for selection
+            let _style = if let Some(style) = styles.get(&style_def.style_id) {
+                style
+            } else {
+                error!("no style ID {} found", style_def.style_id);
+                continue;
+            };
+
+            let start = style_def.offset as usize;
+            let end = start + style_def.length as usize;
+
+            if end >= text.len() {
+                text.push_str(&format!("{}", termion::style::Reset));
+            } else {
+                text.insert_str(end, &format!("{}", termion::style::Reset));
+            }
+            text.insert_str(start, &format!("{}", termion::style::Invert));
+        }
+        text
+    }
+
+    pub fn render_cursor<W: Write>(&self, w: &mut W) {
+        info!("rendering cursor");
+        if self.cache.is_empty() {
+            info!("cache is empty, rendering cursor at the top left corner");
+            if let Err(e) = write!(w, "{}", Goto(1, 1)) {
+                error!("failed to render cursor: {}", e);
+            }
+            return;
         }
 
+        if self.cursor.line < self.cache.invalid_before {
+            error!(
+                "the cursor is on line {} which is marked invalid in the cache",
+                self.cursor.line
+            );
+            return;
+        }
         // Get the line that has the cursor
-        let line = self.cache
-            .lines()
-            .get(self.cursor.line as usize)
-            .and_then(|line| if line.is_valid { Some(line) } else { None })
-            .ok_or_else(|| {
-                error!("No valid line at cursor index {}", self.cursor.line);
-                ErrorKind::DisplayError
-            })?;
+        let line_idx = self.cursor.line - self.cache.invalid_before;
+        let line = match self.cache.lines.get(line_idx as usize) {
+            Some(line) => line,
+            None => {
+                error!("no valid line at cursor index {}", self.cursor.line);
+                return;
+            }
+        };
 
+        if line_idx < self.window.start() {
+            error!(
+                "the line that has the cursor (nb={}, cache_idx={}) not within the displayed window ({:?})",
+                self.cursor.line,
+                line_idx,
+                self.window
+            );
+            return;
+        }
         // Get the line vertical offset so that we know where to draw it.
-        let line_pos = self.window.offset(self.cursor.line).ok_or_else(|| {
-            error!("Could not find line position within the window: {:?}", line);
-            ErrorKind::DisplayError
-        })?;
+        let line_pos = line_idx - self.window.start();
 
         // Calculate the cursor position on the line. The trick is that we know the position within
         // the string, but characters may have various lengths. For the moment, we only handle
@@ -139,12 +197,11 @@ impl View {
             .fold(0, add_char_width);
 
         // Draw the cursor
-        let cursor_pos = cursor::Goto(column as u16 + 1, line_pos + 1);
-        write!(w, "{}", cursor_pos).chain_err(|| ErrorKind::DisplayError)?;
-        debug!("Cursor set at line {} column {}", line_pos, column);
-        w.flush().chain_err(|| ErrorKind::DisplayError)?;
-
-        Ok(())
+        let cursor_pos = Goto(column as u16 + 1, line_pos as u16 + 1);
+        if let Err(e) = write!(w, "{}", cursor_pos) {
+            error!("failed to render cursor: {}", e);
+        }
+        info!("Cursor rendered at ({}, {})", line_pos, column);
     }
 }
 

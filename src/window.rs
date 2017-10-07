@@ -1,43 +1,33 @@
-use cursor::Cursor;
+use view::Cursor;
 
 #[derive(Clone, Debug)]
 pub struct Window {
     start: u64,
     size: u16,
-    dirty: bool,
 }
 
 impl Window {
     pub fn new() -> Self {
-        Window {
-            start: 0,
-            size: 0,
-            dirty: true,
-        }
-    }
-
-    pub fn is_dirty(&self) -> bool {
-        self.dirty
-    }
-
-    pub fn mark_clean(&mut self) {
-        self.dirty = false;
+        Window { start: 0, size: 0 }
     }
 
     pub fn update(&mut self, cursor: &Cursor) {
+        info!("Setting cursor to {:?}", cursor);
         if cursor.line < self.start() {
             self.start = cursor.line;
-            self.dirty = true;
         } else if cursor.line >= self.end() {
             self.start = 1 + cursor.line - u64::from(self.size);
-            self.dirty = true;
         }
+        info!("new window: {:?}", self);
     }
 
-    pub fn resize(&mut self, height: u16, cursor: u64, last_line: u64) {
-        if self.size == height {
-            return;
-        }
+    pub fn resize(&mut self, height: u16, cursor: u64, nb_line: u64) {
+        info!(
+            "resizing window: height={}, cursor={}, nb_line={}",
+            height,
+            cursor,
+            nb_line
+        );
 
         // We have no way to know if the screen was resized from the top or the bottom, so we
         // balance the change between both end. Basically we want:
@@ -56,11 +46,11 @@ impl Window {
         // Handle a first corner case where the previous operation gave us a window that end after
         // the last line. We don't want to waste this space, so we translate the window so that the
         // last line correspond to the end of the window.
-        if new_start + u64::from(height) > last_line {
-            if last_line < u64::from(height) {
+        if new_start + u64::from(height) > nb_line {
+            if nb_line < u64::from(height) {
                 new_start = 0;
             } else {
-                new_start = last_line - u64::from(height);
+                new_start = nb_line - u64::from(height);
             }
         }
 
@@ -74,7 +64,7 @@ impl Window {
 
         self.start = new_start;
         self.size = height;
-        self.dirty = true;
+        info!("done resizing the window: {:?}", self);
     }
 
     pub fn size(&self) -> u16 {
@@ -87,19 +77,5 @@ impl Window {
 
     pub fn end(&self) -> u64 {
         u64::from(self.size) + self.start
-    }
-
-    pub fn is_within_window(&self, index: u64) -> bool {
-        if self.start <= index && index < self.end() {
-            return true;
-        }
-        false
-    }
-
-    pub fn offset(&self, index: u64) -> Option<u16> {
-        if !self.is_within_window(index) {
-            return None;
-        }
-        Some(((index - self.start) & u64::from(u16::max_value())) as u16)
     }
 }

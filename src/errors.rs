@@ -6,29 +6,17 @@ error_chain! {
     foreign_links {
         Fmt(::std::fmt::Error);
         Io(::std::io::Error);
-        SerdeJson(::serde_json::error::Error);
     }
 
     errors {
-        RpcError {
-            description("xi-rpc error")
-            display("a xi-rpc error occured")
-        }
-        DisplayError {
-            description("failed to draw screen")
-            display("failed to draw screen")
-        }
-        UpdateError {
-            description("failed to update a view")
-            display("failed to update a view")
-        }
-        InputError {
-            description("cannot handle input")
-            display("cannot handle input")
-        }
-        TerminalSizeError {
-            description("cannot determine terminal size")
-            display("cannot determine terminal size")
-        }
+    }
+}
+
+use error_chain::ChainedError;
+
+pub fn log_error<E: ChainedError>(e: &E) {
+    error!("error: {}", e);
+    for e in e.iter().skip(1) {
+        error!("caused by: {}", e);
     }
 }
