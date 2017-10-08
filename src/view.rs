@@ -6,9 +6,9 @@ use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
 use cache::LineCache;
-use termion;
 use window::Window;
 use xrl::Style;
+use style::{reset_style, set_style};
 
 use errors::*;
 
@@ -59,11 +59,11 @@ impl View {
     pub fn resize(&mut self, height: u16) {
         if self.cursor.line < self.cache.invalid_before {
             error!(
-                "cursor is on line {} but there are {} invalid lines in cache. Panicking.",
+                "cursor is on line {} but there are {} invalid lines in cache.",
                 self.cursor.line,
                 self.cache.invalid_before
             );
-            panic!();
+            return;
         }
         let cursor_line = self.cursor.line - self.cache.invalid_before;
         let nb_lines = self.cache.lines.len() as u64;
@@ -126,26 +126,70 @@ impl View {
         if line.styles.is_empty() {
             return text;
         }
-        for style_def in &line.styles {
-            // not used yet because we only have the default style for selection
-            let _style = if let Some(style) = styles.get(&style_def.style_id) {
-                style
+        let mut style_sequences = self.get_style_sequences(styles, line);
+        for style in style_sequences.drain(..) {
+            debug!("inserting style: {:?}", style);
+            if style.0 >= text.len() {
+                text.push_str(&style.1);
             } else {
-                error!("no style ID {} found", style_def.style_id);
-                continue;
-            };
-
-            let start = style_def.offset as usize;
-            let end = start + style_def.length as usize;
-
-            if end >= text.len() {
-                text.push_str(&format!("{}", termion::style::Reset));
-            } else {
-                text.insert_str(end, &format!("{}", termion::style::Reset));
+                text.insert_str(style.0, &style.1);
             }
-            text.insert_str(start, &format!("{}", termion::style::Invert));
         }
+        debug!("styled line: {:?}", text);
         text
+    }
+
+    fn get_style_sequences(
+        &self,
+        styles: &HashMap<u64, Style>,
+        line: &Line,
+    ) -> Vec<(usize, String)> {
+        let mut style_sequences: Vec<(usize, String)> = Vec::new();
+        let mut prev_style_end: usize = 0;
+        for style_def in &line.styles {
+            let start_idx = if style_def.offset >= 0 {
+                (prev_style_end + style_def.offset as usize)
+            } else {
+                // FIXME: does that actually work?
+                (prev_style_end - ((-style_def.offset) as usize))
+            };
+            let end_idx = start_idx + style_def.length as usize;
+            prev_style_end = end_idx;
+
+            if let Some(style) = styles.get(&style_def.style_id) {
+                let start_sequence = match set_style(style) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        error!("could not get CSI sequence to set style {:?}: {}", style, e);
+                        continue;
+                    }
+                };
+                let end_sequence = match reset_style(style) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        error!(
+                            "could not get CSI sequence to reset style {:?}: {}",
+                            style,
+                            e
+                        );
+                        continue;
+                    }
+                };
+                style_sequences.push((start_idx, start_sequence));
+                style_sequences.push((end_idx, end_sequence));
+            } else {
+                error!(
+                    "no style ID {} found. Not applying style.",
+                    style_def.style_id
+                );
+            };
+        }
+        // Note that we sort the vector in *reverse* order, so that we apply style starting from
+        // the end of the line, and we don't have to worry about the indices changing.
+        style_sequences.sort_by(|a, b| a.0.cmp(&b.0));
+        style_sequences.reverse();
+        trace!("{:?}", style_sequences);
+        style_sequences
     }
 
     pub fn render_cursor<W: Write>(&self, w: &mut W) {

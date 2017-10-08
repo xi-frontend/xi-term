@@ -33,3 +33,10 @@ width to four spaces, do:
 ```
 tabs -4
 ```
+
+### Colors
+
+If you have the `syntect` plugin installed, colors will be enabled by default, with two caveats:
+
+- you must have true colors enabled. Otherwise, some portions of text won't be displayed
+- the default theme is for dark backgrounds
