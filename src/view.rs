@@ -70,6 +70,13 @@ impl View {
         self.window.resize(height, cursor_line, nb_lines);
     }
 
+    pub fn scroll_region(&self) -> (u64, u64) {
+        (
+            self.cache.invalid_before + self.window.start(),
+            self.cache.invalid_before + self.window.end(),
+        )
+    }
+
     pub fn click(&self, x: u64, y: u64) -> (u64, u64) {
         let lineno = x + self.cache.invalid_before + self.window.start();
         if let Some(line) = self.cache.lines.get(x as usize) {

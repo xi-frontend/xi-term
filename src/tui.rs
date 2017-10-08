@@ -88,12 +88,26 @@ impl Tui {
     }
 
     pub fn handle_resize(&mut self, size: (u16, u16)) {
+        let Tui {
+            ref mut views,
+            ref current_view,
+            ref mut client,
+            ref mut handle,
+            ..
+        } = *self;
         info!("setting new terminal size");
         self.term_size = size;
-        let future = self.client
-            .scroll(&self.current_view, u64::from(size.1), u64::from(size.0))
-            .map_err(|_| ());
-        self.handle.spawn(future);
+        match views.get_mut(current_view) {
+            Some(view) => {
+                view.resize(size.1);
+                let region = view.scroll_region();
+                let future = client
+                    .scroll(current_view, region.0, region.1)
+                    .map_err(|_| ());
+                handle.spawn(future);
+            }
+            None => warn!("view {} not found", current_view),
+        }
     }
 
     pub fn insert(&mut self, character: char) {
@@ -246,9 +260,8 @@ impl Tui {
                     views.insert(view_id.clone(), View::new());
                     *current_view = view_id;
 
-                    info!("notifying the core about the scroll region for the view");
                     let future = client
-                        .scroll(current_view, u64::from(term_size.1), u64::from(term_size.0))
+                        .scroll(current_view, 0,  u64::from(term_size.1))
                         .map_err(|_| ());
                     handle.spawn(future);
                 }
