@@ -47,7 +47,10 @@ Two files will be written:
 
 ## Shortcuts
 
-TODO
+For now, there are only two shortcuts:
+
+- `^w` saves the current view
+- `^c` exits
 
 ## Caveats
 
