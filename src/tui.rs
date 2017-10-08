@@ -2,11 +2,10 @@ use std::io::{self, Write};
 use std::collections::HashMap;
 
 use futures::{future, Async, Future, Poll, Sink, Stream};
-use tokio_core::reactor::Handle;
-
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
 use termion::event::{Event, Key, MouseButton, MouseEvent};
+use tokio_core::reactor::Handle;
 use xrl::{Client, ClientResult, Frontend, FrontendBuilder, ScrollTo, ServerResult, Style, Update};
 
 use errors::*;
@@ -14,7 +13,7 @@ use terminal::{Terminal, TerminalEvent};
 use view::View;
 
 pub struct Tui {
-    pub pending_open_requests: Vec<ClientResult<String>>,
+    pub pending_open_requests: Vec<ClientResult<(String, View)>>,
     pub delayed_events: Vec<CoreEvent>,
     pub views: HashMap<String, View>,
     pub current_view: String,
@@ -137,14 +136,15 @@ impl Tui {
         self.handle.spawn(future);
     }
 
+    // FIXME: the core stops answering when we send "page_up" or "page_down"
     fn page_down(&mut self) {
-        let future = self.client.page_down(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
+        // let future = self.client.page_down(&self.current_view).map_err(|_| ());
+        // self.handle.spawn(future);
     }
 
     fn page_up(&mut self) {
-        let future = self.client.page_up(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
+        // let future = self.client.page_up(&self.current_view).map_err(|_| ());
+        // self.handle.spawn(future);
     }
 
     fn delete(&mut self) {
@@ -152,9 +152,11 @@ impl Tui {
         self.handle.spawn(future);
     }
 
-    pub fn open(&mut self, file_path: &str) {
-        let task = self.client.new_view(Some(file_path.to_string()));
-        self.pending_open_requests.push(task);
+    pub fn open(&mut self, file_path: String) {
+        let task = self.client
+            .new_view(Some(file_path.clone()))
+            .and_then(move |view_id| Ok((view_id, View::new(Some(file_path)))));
+        self.pending_open_requests.push(Box::new(task));
     }
 
     pub fn exit(&mut self) {
@@ -162,7 +164,25 @@ impl Tui {
     }
 
     pub fn save(&mut self) {
-        unimplemented!()
+        let Tui {
+            ref current_view,
+            ref views,
+            ref mut client,
+            ref mut handle,
+            ..
+        } = *self;
+        match views.get(current_view) {
+            Some(view) => if let Some(file) = view.file() {
+                info!("saving {} as {}", current_view, file);
+                handle.spawn(client.save(current_view, file).map_err(|_| ()));
+            } else {
+                error!(
+                    "view {} does not correspond to a file. Could not save it.",
+                    current_view
+                );
+            },
+            None => warn!("view {} not found", current_view),
+        }
     }
 
     pub fn click(&mut self, x: u64, y: u64) {
@@ -202,7 +222,10 @@ impl Tui {
             Event::Key(key) => match key {
                 Key::Char(c) => self.insert(c),
                 Key::Ctrl(c) => match c {
-                    'c' => self.exit(),
+                    'c' => {
+                        info!("exiting");
+                        self.exit();
+                    }
                     'w' => self.save(),
                     _ => error!("un-handled input ctrl+{}", c),
                 },
@@ -254,14 +277,14 @@ impl Tui {
         let mut done = vec![];
         for (idx, task) in pending_open_requests.iter_mut().enumerate() {
             match task.poll() {
-                Ok(Async::Ready(view_id)) => {
-                    info!("open request succeeded for {}", &view_id);
+                Ok(Async::Ready((id, view))) => {
+                    info!("open request succeeded for {}", &id);
                     done.push(idx);
-                    views.insert(view_id.clone(), View::new());
-                    *current_view = view_id;
+                    views.insert(id.clone(), view);
+                    *current_view = id;
 
                     let future = client
-                        .scroll(current_view, 0,  u64::from(term_size.1))
+                        .scroll(current_view, 0, u64::from(term_size.1))
                         .map_err(|_| ());
                     handle.spawn(future);
                 }

@@ -26,15 +26,21 @@ pub struct View {
     cache: LineCache,
     cursor: Cursor,
     window: Window,
+    file: Option<String>,
 }
 
 impl View {
-    pub fn new() -> View {
+    pub fn new(file: Option<String>) -> View {
         View {
             cache: LineCache::new(),
             cursor: Default::default(),
             window: Window::new(),
+            file: file,
         }
+    }
+
+    pub fn file(&self) -> Option<&str> {
+        self.file.as_ref().map(|s| &**s)
     }
 
     pub fn update_cache(&mut self, update: Update) {
@@ -135,14 +141,14 @@ impl View {
         }
         let mut style_sequences = self.get_style_sequences(styles, line);
         for style in style_sequences.drain(..) {
-            debug!("inserting style: {:?}", style);
+            trace!("inserting style: {:?}", style);
             if style.0 >= text.len() {
                 text.push_str(&style.1);
             } else {
                 text.insert_str(style.0, &style.1);
             }
         }
-        debug!("styled line: {:?}", text);
+        trace!("styled line: {:?}", text);
         text
     }
 

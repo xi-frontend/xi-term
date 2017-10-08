@@ -125,7 +125,7 @@ fn run() -> Result<()> {
     info!("initializing the TUI");
     let mut tui =
         Tui::new(core.handle(), client, core_events_rx).chain_err(|| "failed initialize the TUI")?;
-    tui.open(matches.value_of("file").unwrap_or(""));
+    tui.open(matches.value_of("file").unwrap_or("").to_string());
     tui.set_theme("base16-eighties.dark");
 
     info!("spawning the TUI on the event loop");

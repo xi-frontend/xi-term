@@ -785,7 +785,7 @@ dependencies = [
 [[package]]
 name = "xrl"
 version = "0.0.4"
-source = "git+https://github.com/little-dude/xrl#197a8640232b3cbc6cc133c583d863425746b4a7"
+source = "git+https://github.com/little-dude/xrl#2f6e8fc998cbd9d4186a55cb8b9e7760635a68ff"
 dependencies = [
  "bytes 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
