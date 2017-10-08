@@ -54,7 +54,7 @@ impl Tui {
     pub fn handle_core_event(&mut self, event: CoreEvent) {
         match event {
             CoreEvent::Update(update) => self.handle_update(update),
-            CoreEvent::SetStyle(style) => self.handle_set_style(style),
+            CoreEvent::SetStyle(style) => self.handle_def_style(style),
             CoreEvent::ScrollTo(scroll_to) => self.handle_scroll_to(scroll_to),
         }
     }
@@ -83,7 +83,7 @@ impl Tui {
         }
     }
 
-    pub fn handle_set_style(&mut self, style: Style) {
+    pub fn handle_def_style(&mut self, style: Style) {
         self.styles.insert(style.id, style);
     }
 
@@ -213,6 +213,11 @@ impl Tui {
             },
             ev => error!("un-handled event {:?}", ev),
         }
+    }
+
+    pub fn set_theme(&mut self, theme: &str) {
+        let future = self.client.set_theme(theme).map_err(|_| ());
+        self.handle.spawn(future);
     }
 
     pub fn process_open_requests(&mut self) {
@@ -392,7 +397,7 @@ impl Frontend for TuiService {
         self.send_core_event(CoreEvent::ScrollTo(scroll_to))
     }
 
-    fn set_style(&mut self, style: Style) -> ServerResult<()> {
+    fn def_style(&mut self, style: Style) -> ServerResult<()> {
         self.send_core_event(CoreEvent::SetStyle(style))
     }
 }

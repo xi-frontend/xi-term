@@ -25,6 +25,8 @@ mod cache;
 mod errors;
 mod terminal;
 mod view;
+mod style;
+
 use tui::{Tui, TuiServiceBuilder};
 use xrl::spawn;
 
@@ -124,6 +126,7 @@ fn run() -> Result<()> {
     let mut tui =
         Tui::new(core.handle(), client, core_events_rx).chain_err(|| "failed initialize the TUI")?;
     tui.open(matches.value_of("file").unwrap_or(""));
+    tui.set_theme("base16-eighties.dark");
 
     info!("spawning the TUI on the event loop");
     core.run(tui)
