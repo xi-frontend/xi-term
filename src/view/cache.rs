@@ -1,7 +1,5 @@
 use xrl::{Line, Operation, OperationType, Update};
 
-// use errors::*;
-
 #[derive(Clone, Debug)]
 pub struct LineCache {
     pub invalid_before: u64,

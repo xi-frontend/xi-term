@@ -1,8 +1,9 @@
 use std::fmt::Write;
 use termion::color;
 use termion;
-use errors::*;
 use xrl::Style;
+
+use super::errors::*;
 
 fn get_color(argb_color: u32) -> color::Rgb {
     let r = ((argb_color & 0x00ff_0000) >> 16) as u8;

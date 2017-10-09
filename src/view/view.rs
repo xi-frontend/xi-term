@@ -1,16 +1,17 @@
 use std::io::Write;
 use std::collections::HashMap;
 
-use xrl::{Line, Update};
+use termion::event::{Event, Key, MouseButton, MouseEvent};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
+use xrl::{Line, Style, Update};
 
-use cache::LineCache;
-use window::Window;
-use xrl::Style;
-use style::{reset_style, set_style};
+use super::cache::LineCache;
+use super::window::Window;
+use super::style::{reset_style, set_style};
+use super::client::Client;
 
-use errors::*;
+use super::errors::*;
 
 const TAB_LENGTH: u16 = 4;
 
@@ -21,26 +22,23 @@ pub struct Cursor {
 }
 
 
-#[derive(Debug)]
 pub struct View {
     cache: LineCache,
     cursor: Cursor,
     window: Window,
     file: Option<String>,
+    client: Client,
 }
 
 impl View {
-    pub fn new(file: Option<String>) -> View {
+    pub fn new(client: Client, file: Option<String>) -> View {
         View {
+            client: client,
             cache: LineCache::new(),
             cursor: Default::default(),
             window: Window::new(),
             file: file,
         }
-    }
-
-    pub fn file(&self) -> Option<&str> {
-        self.file.as_ref().map(|s| &**s)
     }
 
     pub fn update_cache(&mut self, update: Update) {
@@ -53,16 +51,26 @@ impl View {
             line: line,
             column: column,
         };
-        self.window.update(&self.cursor);
+        self.window.set_cursor(&self.cursor);
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, styles: &HashMap<u64, Style>) -> Result<()> {
+        self.update_window();
         self.render_lines(w, styles)?;
         self.render_cursor(w);
         Ok(())
     }
 
     pub fn resize(&mut self, height: u16) {
+        self.window.resize(height);
+        self.update_window();
+        self.client.scroll(
+            self.cache.invalid_before + self.window.start(),
+            self.cache.invalid_before + self.window.end(),
+        );
+    }
+
+    fn update_window(&mut self) {
         if self.cursor.line < self.cache.invalid_before {
             error!(
                 "cursor is on line {} but there are {} invalid lines in cache.",
@@ -73,17 +81,10 @@ impl View {
         }
         let cursor_line = self.cursor.line - self.cache.invalid_before;
         let nb_lines = self.cache.lines.len() as u64;
-        self.window.resize(height, cursor_line, nb_lines);
+        self.window.update(cursor_line, nb_lines);
     }
 
-    pub fn scroll_region(&self) -> (u64, u64) {
-        (
-            self.cache.invalid_before + self.window.start(),
-            self.cache.invalid_before + self.window.end(),
-        )
-    }
-
-    pub fn click(&self, x: u64, y: u64) -> (u64, u64) {
+    fn get_click_location(&self, x: u64, y: u64) -> (u64, u64) {
         let lineno = x + self.cache.invalid_before + self.window.start();
         if let Some(line) = self.cache.lines.get(x as usize) {
             if y == 0 {
@@ -100,6 +101,48 @@ impl View {
         } else {
             warn!("no line at index {} found in cache", x);
             return (x, y);
+        }
+    }
+
+    fn click(&mut self, x: u64, y: u64) {
+        let (line, column) = self.get_click_location(x, y);
+        self.client.click(line, column);
+    }
+
+    fn drag(&mut self, x: u64, y: u64) {
+        let (line, column) = self.get_click_location(x, y);
+        self.client.drag(line, column);
+    }
+
+
+    pub fn handle_input(&mut self, event: Event) {
+        match event {
+            Event::Key(key) => match key {
+                Key::Char(c) => self.client.insert(c),
+                Key::Ctrl(c) => match c {
+                    'w' => self.client.save(self.file.as_ref().unwrap()),
+                    _ => error!("un-handled input ctrl+{}", c),
+                },
+                Key::Backspace => self.client.delete(),
+                Key::Left => self.client.left(),
+                Key::Right => self.client.right(),
+                Key::Up => self.client.up(),
+                Key::Down => self.client.down(),
+                Key::PageUp => self.client.page_up(),
+                Key::PageDown => self.client.page_down(),
+                k => error!("un-handled key {:?}", k),
+            },
+            Event::Mouse(mouse_event) => match mouse_event {
+                MouseEvent::Press(press_event, y, x) => match press_event {
+                    MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
+                    MouseButton::WheelUp => self.client.up(),
+                    MouseButton::WheelDown => self.client.down(),
+                    button => error!("un-handled button {:?}", button),
+                },
+                MouseEvent::Release(..) => {}
+                MouseEvent::Hold(y, x) => self.drag(u64::from(x) - 1, u64::from(y) - 1),
+            },
+            ev => error!("un-handled event {:?}", ev),
         }
     }
 
@@ -205,7 +248,7 @@ impl View {
         style_sequences
     }
 
-    pub fn render_cursor<W: Write>(&self, w: &mut W) {
+    fn render_cursor<W: Write>(&self, w: &mut W) {
         info!("rendering cursor");
         if self.cache.is_empty() {
             info!("cache is empty, rendering cursor at the top left corner");

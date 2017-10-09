@@ -17,24 +17,20 @@ extern crate termion;
 extern crate tokio_core;
 extern crate xrl;
 
-use tokio_core::reactor::Core;
-
 mod tui;
-mod window;
-mod cache;
 mod errors;
 mod terminal;
 mod view;
-mod style;
-
-use tui::{Tui, TuiServiceBuilder};
-use xrl::spawn;
 
 use futures::{Future, Stream};
-use errors::*;
 use log::LogLevelFilter;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
+use tokio_core::reactor::Core;
+use xrl::spawn;
+
+use errors::*;
+use tui::{Tui, TuiServiceBuilder};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();

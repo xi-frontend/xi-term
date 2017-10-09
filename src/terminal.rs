@@ -39,7 +39,7 @@ impl Terminal {
         Ok(term)
     }
 
-    pub fn start_stdin_listening(tx: UnboundedSender<Event>) {
+    fn start_stdin_listening(tx: UnboundedSender<Event>) {
         let mut tx = tx;
         spawn(move || {
             info!("waiting for input events");
@@ -57,7 +57,7 @@ impl Terminal {
         });
     }
 
-    pub fn start_size_listening(tx: UnboundedSender<(u16, u16)>) {
+    fn start_size_listening(tx: UnboundedSender<(u16, u16)>) {
         let mut tx = tx;
         spawn(move || {
             let mut current_size = (0, 0);

@@ -4,13 +4,13 @@ use std::collections::HashMap;
 use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
-use termion::event::{Event, Key, MouseButton, MouseEvent};
+use termion::event::{Event, Key};
 use tokio_core::reactor::Handle;
 use xrl::{Client, ClientResult, Frontend, FrontendBuilder, ScrollTo, ServerResult, Style, Update};
 
 use errors::*;
 use terminal::{Terminal, TerminalEvent};
-use view::View;
+use view::{View, ViewClient};
 
 pub struct Tui {
     pub pending_open_requests: Vec<ClientResult<(String, View)>>,
@@ -50,7 +50,7 @@ impl Tui {
         })
     }
 
-    pub fn handle_core_event(&mut self, event: CoreEvent) {
+    fn dispatch_core_event(&mut self, event: CoreEvent) {
         match event {
             CoreEvent::Update(update) => self.handle_update(update),
             CoreEvent::SetStyle(style) => self.handle_def_style(style),
@@ -58,7 +58,7 @@ impl Tui {
         }
     }
 
-    pub fn handle_update(&mut self, update: Update) {
+    fn handle_update(&mut self, update: Update) {
         let Tui {
             ref mut views,
             ref mut delayed_events,
@@ -70,7 +70,7 @@ impl Tui {
         }
     }
 
-    pub fn handle_scroll_to(&mut self, scroll_to: ScrollTo) {
+    fn handle_scroll_to(&mut self, scroll_to: ScrollTo) {
         let Tui {
             ref mut views,
             ref mut delayed_events,
@@ -82,172 +82,46 @@ impl Tui {
         }
     }
 
-    pub fn handle_def_style(&mut self, style: Style) {
+    fn handle_def_style(&mut self, style: Style) {
         self.styles.insert(style.id, style);
     }
 
-    pub fn handle_resize(&mut self, size: (u16, u16)) {
+    fn handle_resize(&mut self, size: (u16, u16)) {
         let Tui {
             ref mut views,
             ref current_view,
-            ref mut client,
-            ref mut handle,
             ..
         } = *self;
         info!("setting new terminal size");
         self.term_size = size;
-        match views.get_mut(current_view) {
-            Some(view) => {
-                view.resize(size.1);
-                let region = view.scroll_region();
-                let future = client
-                    .scroll(current_view, region.0, region.1)
-                    .map_err(|_| ());
-                handle.spawn(future);
-            }
-            None => warn!("view {} not found", current_view),
+        if let Some(view) = views.get_mut(current_view) {
+            view.resize(size.1);
+        } else {
+            warn!("view {} not found", current_view);
         }
-    }
-
-    pub fn insert(&mut self, character: char) {
-        let future = self.client
-            .char(&self.current_view, character)
-            .map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn down(&mut self) {
-        let future = self.client.down(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn up(&mut self) {
-        let future = self.client.up(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn left(&mut self) {
-        let future = self.client.left(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn right(&mut self) {
-        let future = self.client.right(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn page_down(&mut self) {
-        let future = self.client.page_down(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn page_up(&mut self) {
-        let future = self.client.page_up(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
-    }
-
-    fn delete(&mut self) {
-        let future = self.client.del(&self.current_view).map_err(|_| ());
-        self.handle.spawn(future);
     }
 
     pub fn open(&mut self, file_path: String) {
+        let client = self.client.clone();
+        let handle = self.handle.clone();
         let task = self.client
             .new_view(Some(file_path.clone()))
-            .and_then(move |view_id| Ok((view_id, View::new(Some(file_path)))));
+            .and_then(move |view_id| {
+                let view_client = ViewClient::new(client, handle, view_id.clone());
+                Ok((view_id, View::new(view_client, Some(file_path))))
+            });
         self.pending_open_requests.push(Box::new(task));
     }
 
-    pub fn exit(&mut self) {
+    fn exit(&mut self) {
         self.shutdown = true;
     }
 
-    pub fn save(&mut self) {
-        let Tui {
-            ref current_view,
-            ref views,
-            ref mut client,
-            ref mut handle,
-            ..
-        } = *self;
-        match views.get(current_view) {
-            Some(view) => if let Some(file) = view.file() {
-                info!("saving {} as {}", current_view, file);
-                handle.spawn(client.save(current_view, file).map_err(|_| ()));
-            } else {
-                error!(
-                    "view {} does not correspond to a file. Could not save it.",
-                    current_view
-                );
-            },
-            None => warn!("view {} not found", current_view),
-        }
-    }
-
-    pub fn click(&mut self, x: u64, y: u64) {
-        let Tui {
-            ref mut client,
-            ref mut views,
-            ref mut handle,
-            ref current_view,
-            ..
-        } = *self;
-        if let Some(view) = views.get_mut(current_view) {
-            let (line, column) = view.click(x, y);
-            let future = client.click(current_view, line, column).map_err(|_| ());
-            handle.spawn(future);
-        }
-        error!("view not found");
-    }
-
-    pub fn drag(&mut self, x: u64, y: u64) {
-        let Tui {
-            ref mut client,
-            ref mut views,
-            ref mut handle,
-            ref current_view,
-            ..
-        } = *self;
-        if let Some(view) = views.get_mut(current_view) {
-            let (line, column) = view.click(x, y);
-            let future = client.drag(current_view, line, column).map_err(|_| ());
-            handle.spawn(future);
-        }
-        error!("view not found");
-    }
-
-    pub fn handle_input(&mut self, event: Event) {
-        match event {
-            Event::Key(key) => match key {
-                Key::Char(c) => self.insert(c),
-                Key::Ctrl(c) => match c {
-                    'c' => {
-                        info!("exiting");
-                        self.exit();
-                    }
-                    'w' => self.save(),
-                    _ => error!("un-handled input ctrl+{}", c),
-                },
-                Key::Backspace => self.delete(),
-                Key::Left => self.left(),
-                Key::Right => self.right(),
-                Key::Up => self.up(),
-                Key::Down => self.down(),
-                Key::PageUp => self.page_up(),
-                Key::PageDown => self.page_down(),
-                k => error!("un-handled key {:?}", k),
-            },
-            Event::Mouse(mouse_event) => match mouse_event {
-                MouseEvent::Press(press_event, y, x) => match press_event {
-                    MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
-                    MouseButton::WheelUp => self.up(),
-                    MouseButton::WheelDown => self.down(),
-                    button => error!("un-handled button {:?}", button),
-                },
-                MouseEvent::Release(..) => {}
-                MouseEvent::Hold(y, x) => self.drag(u64::from(x) - 1, u64::from(y) - 1),
-            },
-            ev => error!("un-handled event {:?}", ev),
+    fn handle_input(&mut self, event: Event) {
+        if Event::Key(Key::Ctrl('c')) == event {
+            self.exit()
+        } else if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.handle_input(event)
         }
     }
 
@@ -256,7 +130,7 @@ impl Tui {
         self.handle.spawn(future);
     }
 
-    pub fn process_open_requests(&mut self) {
+    fn process_open_requests(&mut self) {
         if self.pending_open_requests.is_empty() {
             return;
         }
@@ -267,8 +141,6 @@ impl Tui {
             ref mut pending_open_requests,
             ref mut views,
             ref mut current_view,
-            ref mut client,
-            ref mut handle,
             ref term_size,
             ..
         } = *self;
@@ -276,16 +148,12 @@ impl Tui {
         let mut done = vec![];
         for (idx, task) in pending_open_requests.iter_mut().enumerate() {
             match task.poll() {
-                Ok(Async::Ready((id, view))) => {
+                Ok(Async::Ready((id, mut view))) => {
                     info!("open request succeeded for {}", &id);
                     done.push(idx);
+                    view.resize(term_size.1);
                     views.insert(id.clone(), view);
                     *current_view = id;
-
-                    let future = client
-                        .scroll(current_view, 0, u64::from(term_size.1))
-                        .map_err(|_| ());
-                    handle.spawn(future);
                 }
                 Ok(Async::NotReady) => continue,
                 Err(e) => panic!("\"open\" task failed: {}", e),
@@ -300,7 +168,7 @@ impl Tui {
         }
     }
 
-    pub fn process_terminal_events(&mut self) {
+    fn process_terminal_events(&mut self) {
         let mut new_size: Option<(u16, u16)> = None;
         loop {
             match self.term.poll() {
@@ -328,11 +196,11 @@ impl Tui {
         }
     }
 
-    pub fn process_core_events(&mut self) {
+    fn process_core_events(&mut self) {
         loop {
             match self.events.poll() {
                 Ok(Async::Ready(Some(event))) => {
-                    self.handle_core_event(event);
+                    self.dispatch_core_event(event);
                 }
                 Ok(Async::Ready(None)) => {
                     error!("core stdout shut down => panicking");
@@ -347,24 +215,22 @@ impl Tui {
         }
     }
 
-    pub fn process_delayed_events(&mut self) {
+    fn process_delayed_events(&mut self) {
         let delayed_events: Vec<CoreEvent> = self.delayed_events.drain(..).collect();
         for event in delayed_events {
-            self.handle_core_event(event);
+            self.dispatch_core_event(event);
         }
     }
 
-    pub fn render(&mut self) -> Result<()> {
+    fn render(&mut self) -> Result<()> {
         let Tui {
             ref mut views,
             ref mut term,
             ref current_view,
-            ref term_size,
             ref styles,
             ..
         } = *self;
         if let Some(view) = views.get_mut(current_view) {
-            view.resize(term_size.1);
             view.render(term.stdout(), styles)?;
             if let Err(e) = term.stdout().flush() {
                 error!("failed to flush stdout: {}", e);
