@@ -136,15 +136,14 @@ impl Tui {
         self.handle.spawn(future);
     }
 
-    // FIXME: the core stops answering when we send "page_up" or "page_down"
     fn page_down(&mut self) {
-        // let future = self.client.page_down(&self.current_view).map_err(|_| ());
-        // self.handle.spawn(future);
+        let future = self.client.page_down(&self.current_view).map_err(|_| ());
+        self.handle.spawn(future);
     }
 
     fn page_up(&mut self) {
-        // let future = self.client.page_up(&self.current_view).map_err(|_| ());
-        // self.handle.spawn(future);
+        let future = self.client.page_up(&self.current_view).map_err(|_| ());
+        self.handle.spawn(future);
     }
 
     fn delete(&mut self) {
