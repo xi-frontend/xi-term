@@ -67,8 +67,7 @@ impl Terminal {
                     Ok(new_size) => if new_size != current_size {
                         info!(
                             "terminal resized (from {:?} to {:?})",
-                            current_size,
-                            new_size
+                            current_size, new_size
                         );
                         current_size = new_size;
                         let _ = tx.start_send(current_size).unwrap();
@@ -107,7 +106,7 @@ impl Stream for Terminal {
                 return Ok(Async::Ready(None));
             }
             Ok(Async::NotReady) => {}
-            Err(e) => return Err(e),
+            Err(()) => return Err(()),
         }
         match self.stdin.poll() {
             Ok(Async::Ready(Some(event))) => {
@@ -118,7 +117,7 @@ impl Stream for Terminal {
                 return Ok(Async::Ready(None));
             }
             Ok(Async::NotReady) => {}
-            Err(e) => return Err(e),
+            Err(()) => return Err(()),
         }
         Ok(Async::NotReady)
     }

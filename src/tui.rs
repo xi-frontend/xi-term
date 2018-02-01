@@ -6,17 +6,19 @@ use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
 use termion::event::{Event, Key};
 use tokio_core::reactor::Handle;
-use xrl::{Client, ClientResult, Frontend, FrontendBuilder, ScrollTo, ServerResult, Style, Update};
+use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, FrontendBuilder,
+          PluginStarted, PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update,
+          UpdateCmds, ViewId};
 
 use errors::*;
 use terminal::{Terminal, TerminalEvent};
 use view::{View, ViewClient};
 
 pub struct Tui {
-    pub pending_open_requests: Vec<ClientResult<(String, View)>>,
+    pub pending_open_requests: Vec<ClientResult<(ViewId, View)>>,
     pub delayed_events: Vec<CoreEvent>,
-    pub views: HashMap<String, View>,
-    pub current_view: String,
+    pub views: HashMap<ViewId, View>,
+    pub current_view: ViewId,
     pub events: UnboundedReceiver<CoreEvent>,
     pub handle: Handle,
     pub client: Client,
@@ -44,7 +46,7 @@ impl Tui {
             term_size: (0, 0),
             views: HashMap::new(),
             styles: styles,
-            current_view: "".into(),
+            current_view: ViewId(0),
             client: client,
             shutdown: false,
         })
@@ -107,7 +109,7 @@ impl Tui {
         let task = self.client
             .new_view(Some(file_path.clone()))
             .and_then(move |view_id| {
-                let view_client = ViewClient::new(client, handle, view_id.clone());
+                let view_client = ViewClient::new(client, handle, view_id);
                 Ok((view_id, View::new(view_client, Some(file_path))))
             });
         self.pending_open_requests.push(Box::new(task));
@@ -152,7 +154,7 @@ impl Tui {
                     info!("open request succeeded for {}", &id);
                     done.push(idx);
                     view.resize(term_size.1);
-                    views.insert(id.clone(), view);
+                    views.insert(id, view);
                     *current_view = id;
                 }
                 Ok(Async::NotReady) => continue,
@@ -288,7 +290,6 @@ impl TuiService {
     }
 }
 
-
 impl Frontend for TuiService {
     fn update(&mut self, update: Update) -> ServerResult<()> {
         self.send_core_event(CoreEvent::Update(update))
@@ -300,6 +301,24 @@ impl Frontend for TuiService {
 
     fn def_style(&mut self, style: Style) -> ServerResult<()> {
         self.send_core_event(CoreEvent::SetStyle(style))
+    }
+    fn available_plugins(&mut self, _plugins: AvailablePlugins) -> ServerResult<()> {
+        Box::new(future::ok(()))
+    }
+    fn update_cmds(&mut self, _plugins: UpdateCmds) -> ServerResult<()> {
+        Box::new(future::ok(()))
+    }
+    fn plugin_started(&mut self, _plugins: PluginStarted) -> ServerResult<()> {
+        Box::new(future::ok(()))
+    }
+    fn plugin_stoped(&mut self, _plugin: PluginStoped) -> ServerResult<()> {
+        Box::new(future::ok(()))
+    }
+    fn config_changed(&mut self, _config: ConfigChanged) -> ServerResult<()> {
+        Box::new(future::ok(()))
+    }
+    fn theme_changed(&mut self, _theme: ThemeChanged) -> ServerResult<()> {
+        Box::new(future::ok(()))
     }
 }
 

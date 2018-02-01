@@ -91,8 +91,7 @@ impl<'a, 'b, 'c> UpdateHelper<'a, 'b, 'c> {
 
         error!(
             "{} lines left to copy, but only {} lines in the old cache",
-            nb_lines,
-            **old_invalid_after
+            nb_lines, **old_invalid_after
         );
         panic!("cache update failed");
     }
@@ -136,8 +135,7 @@ impl<'a, 'b, 'c> UpdateHelper<'a, 'b, 'c> {
 
         error!(
             "{} lines left to skip, but only {} lines in the old cache",
-            nb_lines,
-            **old_invalid_after
+            nb_lines, **old_invalid_after
         );
         panic!("cache update failed");
     }
