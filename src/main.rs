@@ -8,9 +8,9 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 
-extern crate log4rs;
 #[macro_use]
 extern crate log;
+extern crate log4rs;
 
 extern crate futures;
 extern crate termion;
@@ -23,7 +23,7 @@ mod terminal;
 mod view;
 
 use futures::{Future, Stream};
-use log::LogLevelFilter;
+use log::LevelFilter;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use tokio_core::reactor::Core;
@@ -44,21 +44,21 @@ fn configure_logs(logfile: &str) {
             Logger::builder()
                 .appender("tui")
                 .additive(false)
-                .build("xi_tui", LogLevelFilter::Debug),
+                .build("xi_tui", LevelFilter::Debug),
         )
         .logger(
             Logger::builder()
                 .appender("tui")
                 .additive(false)
-                .build("xrl", LogLevelFilter::Info),
+                .build("xrl", LevelFilter::Info),
         )
         .logger(
             Logger::builder()
                 .appender("rpc")
                 .additive(false)
-                .build("xrl::protocol::codec", LogLevelFilter::Trace),
+                .build("xrl::protocol::codec", LevelFilter::Trace),
         )
-        .build(Root::builder().appender("tui").build(LogLevelFilter::Info))
+        .build(Root::builder().appender("tui").build(LevelFilter::Info))
         .unwrap();
     let _ = log4rs::init_config(config).unwrap();
 }

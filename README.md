@@ -19,7 +19,7 @@ cargo install
 
 # if you want syntax highlighting, you need to install the syntect plugin:
 cd syntect-plugin
-cargo install
+make install
 
 # You need to add ~/.cargo/bin to your PATH
 # (this is where `cargo install` places binaries).

@@ -28,9 +28,7 @@ impl Window {
     pub fn update(&mut self, cursor: u64, nb_line: u64) {
         info!(
             "resizing window: height={}, cursor={}, nb_line={}",
-            self.size,
-            cursor,
-            nb_line
+            self.size, cursor, nb_line
         );
 
         // We have no way to know if the screen was resized from the top or the bottom, so we

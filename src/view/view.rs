@@ -21,7 +21,6 @@ pub struct Cursor {
     pub column: u64,
 }
 
-
 pub struct View {
     cache: LineCache,
     cursor: Cursor,
@@ -74,8 +73,7 @@ impl View {
         if self.cursor.line < self.cache.invalid_before {
             error!(
                 "cursor is on line {} but there are {} invalid lines in cache.",
-                self.cursor.line,
-                self.cache.invalid_before
+                self.cursor.line, self.cache.invalid_before
             );
             return;
         }
@@ -113,7 +111,6 @@ impl View {
         let (line, column) = self.get_click_location(x, y);
         self.client.drag(line, column);
     }
-
 
     pub fn handle_input(&mut self, event: Event) {
         match event {
@@ -225,8 +222,7 @@ impl View {
                     Err(e) => {
                         error!(
                             "could not get CSI sequence to reset style {:?}: {}",
-                            style,
-                            e
+                            style, e
                         );
                         continue;
                     }
