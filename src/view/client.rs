@@ -48,7 +48,7 @@ impl Client {
     }
 
     pub fn page_down(&mut self) {
-        let f = self.inner.page_up(self.view_id).map_err(|_| ());
+        let f = self.inner.page_down(self.view_id).map_err(|_| ());
         self.handle.spawn(f);
     }
 
