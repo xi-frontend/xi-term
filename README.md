@@ -1,8 +1,8 @@
-# xi-tui
+# xi-term
 
-[![Build Status](https://travis-ci.org/little-dude/xi-tui.svg?branch=master)](https://travis-ci.org/little-dude/xi-tui)
+[![Build Status](https://travis-ci.org/xi-frontend/xi-term.svg?branch=master)](https://travis-ci.org/xi-frontend/xi-term)
 
-`xi-tui` is a terminal frontend for [xi](https://github.com/google/xi-editor/).
+Formerly `xi-tui`, `xi-term` is a terminal frontend for [xi](https://github.com/google/xi-editor/).
 
 It is experimental and under development, so don't expect anything magical (yet!).
 
@@ -33,10 +33,10 @@ Then you can clone this repository and run the frontend with
 ## Logging
 
 For debugging, it can be useful to have logs.
-You can specify a location for log files `xi-tui` with `-l <logfile>`.
+You can specify a location for log files `xi-term` with `-l <logfile>`.
 Two files will be written:
 
-- `<logfile>`: all the `xi-tui` logs
+- `<logfile>`: all the `xi-term` logs
 - `<logfile>.rpc`: the RPC messages exchanged between the core and the frontend
 
 ## Screenshots
