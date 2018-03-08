@@ -32,11 +32,11 @@ pub struct View {
 impl View {
     pub fn new(client: Client, file: Option<String>) -> View {
         View {
-            client: client,
+            client,
             cache: LineCache::new(),
             cursor: Default::default(),
             window: Window::new(),
-            file: file,
+            file,
         }
     }
 
@@ -47,8 +47,8 @@ impl View {
 
     pub fn set_cursor(&mut self, line: u64, column: u64) {
         self.cursor = Cursor {
-            line: line,
-            column: column,
+            line,
+            column,
         };
         self.window.set_cursor(&self.cursor);
     }

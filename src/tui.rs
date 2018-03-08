@@ -38,16 +38,16 @@ impl Tui {
         styles.insert(0, Default::default());
 
         Ok(Tui {
-            events: events,
+            events,
             delayed_events: Vec::new(),
             pending_open_requests: Vec::new(),
-            handle: handle,
+            handle,
             term: Terminal::new()?,
             term_size: (0, 0),
             views: HashMap::new(),
-            styles: styles,
+            styles,
             current_view: ViewId(0),
-            client: client,
+            client,
             shutdown: false,
         })
     }

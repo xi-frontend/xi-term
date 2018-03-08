@@ -12,8 +12,8 @@ impl Client {
     pub fn new(client: xrl::Client, handle: Handle, view_id: xrl::ViewId) -> Self {
         Client {
             inner: client,
-            handle: handle,
-            view_id: view_id,
+            handle,
+            view_id,
         }
     }
 

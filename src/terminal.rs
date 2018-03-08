@@ -31,7 +31,7 @@ impl Terminal {
         let term = Terminal {
             stdin: stdin_rx,
             size: size_rx,
-            stdout: stdout,
+            stdout,
         };
 
         Terminal::start_stdin_listening(stdin_tx);
