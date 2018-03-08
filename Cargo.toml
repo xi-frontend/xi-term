@@ -1,6 +1,6 @@
 [package]
 authors = ["Corentin Henry <corentinhenry@gmail.com>"]
-name = "xi-tui"
+name = "xi-term"
 version = "0.1.0"
 
 [dependencies]
@@ -17,4 +17,4 @@ optional = true
 version = "0.0.184"
 
 [dependencies.xrl]
-git = "https://github.com/little-dude/xrl"
+git = "https://github.com/xi-frontend/xrl"
