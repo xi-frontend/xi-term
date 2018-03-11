@@ -18,4 +18,4 @@ optional = true
 version = "0.0.187"
 
 [dependencies.xrl]
-git = "https://github.com/xi-frontend/xrl"
+git = "https://github.com/bytebuddha/xrl"

@@ -4,9 +4,8 @@ use std::collections::HashMap;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
-use xrl::{Line, Style, Update};
+use xrl::{LineCache, Line, Style, Update};
 
-use super::cache::LineCache;
 use super::window::Window;
 use super::style::{reset_style, set_style};
 use super::client::Client;
@@ -33,7 +32,7 @@ impl View {
     pub fn new(client: Client, file: Option<String>) -> View {
         View {
             client,
-            cache: LineCache::new(),
+            cache: LineCache::default(),
             cursor: Default::default(),
             window: Window::new(),
             file,
@@ -64,27 +63,27 @@ impl View {
         self.window.resize(height);
         self.update_window();
         self.client.scroll(
-            self.cache.invalid_before + self.window.start(),
-            self.cache.invalid_before + self.window.end(),
+            self.cache.before() + self.window.start(),
+            self.cache.after() + self.window.end(),
         );
     }
 
     fn update_window(&mut self) {
-        if self.cursor.line < self.cache.invalid_before {
+        if self.cursor.line < self.cache.before() {
             error!(
                 "cursor is on line {} but there are {} invalid lines in cache.",
-                self.cursor.line, self.cache.invalid_before
+                self.cursor.line, self.cache.before()
             );
             return;
         }
-        let cursor_line = self.cursor.line - self.cache.invalid_before;
-        let nb_lines = self.cache.lines.len() as u64;
+        let cursor_line = self.cursor.line - self.cache.before();
+        let nb_lines = self.cache.lines().len() as u64;
         self.window.update(cursor_line, nb_lines);
     }
 
     fn get_click_location(&self, x: u64, y: u64) -> (u64, u64) {
-        let lineno = x + self.cache.invalid_before + self.window.start();
-        if let Some(line) = self.cache.lines.get(x as usize) {
+        let lineno = x + self.cache.before() + self.window.start();
+        if let Some(line) = self.cache.lines().get(x as usize) {
             if y == 0 {
                 return (lineno, 0);
             }
@@ -149,7 +148,7 @@ impl View {
 
         // Get the lines that are within the displayed window
         let lines = self.cache
-            .lines
+            .lines()
             .iter()
             .skip(self.window.start() as usize)
             .take(self.window.size() as usize);
@@ -254,7 +253,7 @@ impl View {
             return;
         }
 
-        if self.cursor.line < self.cache.invalid_before {
+        if self.cursor.line < self.cache.before() {
             error!(
                 "the cursor is on line {} which is marked invalid in the cache",
                 self.cursor.line
@@ -262,8 +261,8 @@ impl View {
             return;
         }
         // Get the line that has the cursor
-        let line_idx = self.cursor.line - self.cache.invalid_before;
-        let line = match self.cache.lines.get(line_idx as usize) {
+        let line_idx = self.cursor.line - self.cache.before();
+        let line = match self.cache.lines().get(line_idx as usize) {
             Some(line) => line,
             None => {
                 error!("no valid line at cursor index {}", self.cursor.line);
