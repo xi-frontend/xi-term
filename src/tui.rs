@@ -10,6 +10,8 @@ use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, Front
           PluginStarted, PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update,
           UpdateCmds, ViewId};
 
+use xdg::BaseDirectories;
+
 use errors::*;
 use terminal::{Terminal, TerminalEvent};
 use view::{View, ViewClient};
@@ -31,11 +33,16 @@ pub struct Tui {
 impl Tui {
     pub fn new(
         handle: Handle,
-        client: Client,
+        mut client: Client,
         events: UnboundedReceiver<CoreEvent>,
     ) -> Result<Self> {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
+        if let Ok(dirs) = BaseDirectories::with_prefix("xi") {
+            if let Some(conf_dir) = dirs.get_config_home().to_str() {
+                handle.spawn(client.client_started(Some(conf_dir)).map_err(|_|()));
+            }
+        }
 
         Ok(Tui {
             events,
