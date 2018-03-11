@@ -11,6 +11,7 @@ log = "0.4.1"
 log4rs = "0.8.0"
 termion = "1.5.1"
 tokio-core = "0.1.12"
+xdg = "2.1.0"
 
 [dependencies.clippy]
 optional = true
