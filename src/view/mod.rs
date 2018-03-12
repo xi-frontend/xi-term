@@ -1,4 +1,3 @@
-mod cache;
 mod client;
 mod style;
 #[cfg_attr(feature = "clippy", allow(module_inception))]
