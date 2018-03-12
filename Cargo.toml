@@ -12,10 +12,8 @@ log4rs = "0.8.0"
 termion = "1.5.1"
 tokio-core = "0.1.12"
 xdg = "2.1.0"
+xrl = "0.0.5"
 
 [dependencies.clippy]
 optional = true
 version = "0.0.187"
-
-[dependencies.xrl]
-git = "https://github.com/bytebuddha/xrl"
