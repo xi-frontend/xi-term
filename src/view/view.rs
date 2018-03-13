@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
-use xrl::{LineCache, Line, Style, Update};
+use xrl::{Line, LineCache, Style, Update};
 
 use super::window::Window;
 use super::style::{reset_style, set_style};
@@ -45,10 +45,7 @@ impl View {
     }
 
     pub fn set_cursor(&mut self, line: u64, column: u64) {
-        self.cursor = Cursor {
-            line,
-            column,
-        };
+        self.cursor = Cursor { line, column };
         self.window.set_cursor(&self.cursor);
     }
 
@@ -72,7 +69,8 @@ impl View {
         if self.cursor.line < self.cache.before() {
             error!(
                 "cursor is on line {} but there are {} invalid lines in cache.",
-                self.cursor.line, self.cache.before()
+                self.cursor.line,
+                self.cache.before()
             );
             return;
         }

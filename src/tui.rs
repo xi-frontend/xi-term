@@ -40,8 +40,14 @@ impl Tui {
     ) -> Result<Self> {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
-        let conf_dir = BaseDirectories::with_prefix("xi").ok().and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
-        core.run(client.client_started(conf_dir.as_ref().map(|dir| &**dir), None).map_err(|_|())).unwrap();
+        let conf_dir = BaseDirectories::with_prefix("xi")
+            .ok()
+            .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
+        core.run(
+            client
+                .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
+                .map_err(|_| ()),
+        ).unwrap();
         Ok(Tui {
             events,
             delayed_events: Vec::new(),

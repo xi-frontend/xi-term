@@ -15,8 +15,8 @@ extern crate log4rs;
 extern crate futures;
 extern crate termion;
 extern crate tokio_core;
-extern crate xrl;
 extern crate xdg;
+extern crate xrl;
 
 mod tui;
 mod errors;
