@@ -1,11 +1,13 @@
 use std::io::{self, Write};
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
 use termion::event::{Event, Key};
 use tokio_core::reactor::Handle;
+use tokio_core::reactor::Core;
 use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, FrontendBuilder,
           PluginStarted, PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update,
           UpdateCmds, ViewId};
@@ -32,23 +34,19 @@ pub struct Tui {
 
 impl Tui {
     pub fn new(
-        handle: Handle,
+        core: &mut Core,
         mut client: Client,
         events: UnboundedReceiver<CoreEvent>,
     ) -> Result<Self> {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
-        if let Ok(dirs) = BaseDirectories::with_prefix("xi") {
-            if let Some(conf_dir) = dirs.get_config_home().to_str() {
-                handle.spawn(client.client_started(Some(conf_dir)).map_err(|_|()));
-            }
-        }
-
+        let conf_dir = BaseDirectories::with_prefix("xi").ok().and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
+        core.run(client.client_started(conf_dir.as_ref().map(|dir| &**dir), None).map_err(|_|())).unwrap();
         Ok(Tui {
             events,
             delayed_events: Vec::new(),
             pending_open_requests: Vec::new(),
-            handle,
+            handle: core.handle(),
             term: Terminal::new()?,
             term_size: (0, 0),
             views: HashMap::new(),
