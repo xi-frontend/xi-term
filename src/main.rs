@@ -15,8 +15,8 @@ extern crate log4rs;
 extern crate futures;
 extern crate termion;
 extern crate tokio_core;
-extern crate xrl;
 extern crate xdg;
+extern crate xrl;
 
 mod tui;
 mod errors;
@@ -121,7 +121,8 @@ fn run() -> Result<()> {
 
     info!("initializing the TUI");
     let mut tui =
-        Tui::new(core.handle(), client, core_events_rx).chain_err(|| "failed initialize the TUI")?;
+        Tui::new(&mut core, client, core_events_rx).chain_err(|| "failed initialize the TUI")?;
+
     tui.open(matches.value_of("file").unwrap_or("").to_string());
     tui.set_theme("base16-eighties.dark");
 
