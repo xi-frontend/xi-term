@@ -17,4 +17,4 @@ xrl = { git = "https://github.com/xi-frontend/xrl" }
 
 [dependencies.clippy]
 optional = true
-version = "0.0.187"
+version = "0.0.193"

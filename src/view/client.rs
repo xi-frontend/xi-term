@@ -58,7 +58,12 @@ impl Client {
     }
 
     pub fn delete(&mut self) {
-        let f = self.inner.del(self.view_id).map_err(|_| ());
+        let f = self.inner.delete(self.view_id).map_err(|_| ());
+        self.handle.spawn(f);
+    }
+
+    pub fn backspace(&mut self) {
+        let f = self.inner.backspace(self.view_id).map_err(|_| ());
         self.handle.spawn(f);
     }
 
