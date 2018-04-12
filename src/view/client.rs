@@ -57,6 +57,16 @@ impl Client {
         self.handle.spawn(f);
     }
 
+    pub fn home(&mut self) {
+        let f = self.inner.line_start(self.view_id).map_err(|_| ());
+        self.handle.spawn(f);
+    }
+
+    pub fn end(&mut self) {
+        let f = self.inner.line_end(self.view_id).map_err(|_| ());
+        self.handle.spawn(f);
+    }
+
     pub fn delete(&mut self) {
         let f = self.inner.delete(self.view_id).map_err(|_| ());
         self.handle.spawn(f);

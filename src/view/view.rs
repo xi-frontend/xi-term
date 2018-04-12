@@ -123,6 +123,8 @@ impl View {
                 Key::Right => self.client.right(),
                 Key::Up => self.client.up(),
                 Key::Down => self.client.down(),
+                Key::Home => self.client.home(),
+                Key::End => self.client.end(),
                 Key::PageUp => self.client.page_up(),
                 Key::PageDown => self.client.page_down(),
                 k => error!("un-handled key {:?}", k),
