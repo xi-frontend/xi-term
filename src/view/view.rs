@@ -5,12 +5,11 @@ use termion::event::{Event, Key, MouseButton, MouseEvent};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 use xrl::{Line, LineCache, Style, Update};
+use failure::Error;
 
 use super::window::Window;
 use super::style::{reset_style, set_style};
 use super::client::Client;
-
-use super::errors::*;
 
 const TAB_LENGTH: u16 = 4;
 
@@ -49,7 +48,8 @@ impl View {
         self.window.set_cursor(&self.cursor);
     }
 
-    pub fn render<W: Write>(&mut self, w: &mut W, styles: &HashMap<u64, Style>) -> Result<()> {
+    pub fn render<W: Write>(&mut self, w: &mut W, styles: &HashMap<u64, Style>)
+                            -> Result<(), Error> {
         self.update_window();
         self.render_lines(w, styles)?;
         self.render_cursor(w);
@@ -143,7 +143,8 @@ impl View {
         }
     }
 
-    fn render_lines<W: Write>(&self, w: &mut W, styles: &HashMap<u64, Style>) -> Result<()> {
+    fn render_lines<W: Write>(&self, w: &mut W, styles: &HashMap<u64, Style>)
+                              -> Result<(), Error> {
         debug!("rendering lines");
         trace!("current cache\n{:?}", self.cache);
 

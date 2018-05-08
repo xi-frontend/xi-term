@@ -5,8 +5,7 @@
 #[macro_use]
 extern crate clap;
 
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 #[macro_use]
 extern crate log;
@@ -19,7 +18,6 @@ extern crate xdg;
 extern crate xrl;
 
 mod tui;
-mod errors;
 mod terminal;
 mod view;
 
@@ -29,8 +27,8 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use tokio_core::reactor::Core;
 use xrl::spawn;
+use failure::{Error, ResultExt};
 
-use errors::*;
 use tui::{Tui, TuiServiceBuilder};
 
 fn configure_logs(logfile: &str) {
@@ -72,20 +70,17 @@ fn main() {
         writeln!(stderr, "error: {}", e).unwrap();
         error!("error: {}", e);
 
-        for e in e.iter().skip(1) {
-            writeln!(stderr, "caused by: {}", e).unwrap();
-            error!("error: {}", e);
-        }
+        writeln!(stderr, "caused by: {}", e.cause()).unwrap();
+        error!("error: {}", e);
 
-        if let Some(backtrace) = e.backtrace() {
-            writeln!(stderr, "backtrace: {:?}", backtrace).unwrap();
-            error!("error: {}", e);
-        }
+        writeln!(stderr, "backtrace: {:?}", e.backtrace()).unwrap();
+        error!("error: {}", e);
+
         ::std::process::exit(1);
     }
 }
 
-fn run() -> Result<()> {
+fn run() -> Result<(), Error> {
     let xi = clap_app!(
         xi =>
         (about: "The Xi Editor")
@@ -99,7 +94,7 @@ fn run() -> Result<()> {
     }
 
     info!("starting the event loop");
-    let mut core = Core::new().chain_err(|| "failed to create event loop")?;
+    let mut core = Core::new().context("Failed to create event loop")?;
 
     info!("starting xi-core");
     let (tui_builder, core_events_rx) = TuiServiceBuilder::new();
@@ -120,14 +115,13 @@ fn run() -> Result<()> {
     info!("starting logging xi-core errors");
 
     info!("initializing the TUI");
-    let mut tui =
-        Tui::new(&mut core, client, core_events_rx).chain_err(|| "failed initialize the TUI")?;
+    let mut tui = Tui::new(&mut core, client, core_events_rx)
+        .context("Failed to initialize the TUI")?;
 
     tui.open(matches.value_of("file").unwrap_or("").to_string());
     tui.set_theme("base16-eighties.dark");
 
     info!("spawning the TUI on the event loop");
-    core.run(tui)
-        .chain_err(|| "an error occured while running the TUI")?;
+    core.run(tui)?;
     Ok(())
 }

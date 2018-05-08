@@ -1,6 +1,5 @@
 use std::io::{self, Write};
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
@@ -13,8 +12,8 @@ use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, Front
           UpdateCmds, ViewId};
 
 use xdg::BaseDirectories;
+use failure::Error;
 
-use errors::*;
 use terminal::{Terminal, TerminalEvent};
 use view::{View, ViewClient};
 
@@ -37,7 +36,7 @@ impl Tui {
         core: &mut Core,
         mut client: Client,
         events: UnboundedReceiver<CoreEvent>,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error> {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
         let conf_dir = BaseDirectories::with_prefix("xi")
@@ -235,7 +234,7 @@ impl Tui {
         }
     }
 
-    fn render(&mut self) -> Result<()> {
+    fn render(&mut self) -> Result<(), Error> {
         let Tui {
             ref mut views,
             ref mut term,
@@ -271,7 +270,8 @@ impl Future for Tui {
         self.process_core_events();
 
         if let Err(e) = self.render() {
-            log_error(&e);
+            error!("error: {}", e);
+            error!("caused by: {}", e.cause());
         }
 
         if self.shutdown {

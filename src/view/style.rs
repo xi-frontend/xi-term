@@ -3,7 +3,7 @@ use termion::color;
 use termion;
 use xrl::Style;
 
-use super::errors::*;
+use failure::Error;
 
 fn get_color(argb_color: u32) -> color::Rgb {
     let r = ((argb_color & 0x00ff_0000) >> 16) as u8;
@@ -12,7 +12,7 @@ fn get_color(argb_color: u32) -> color::Rgb {
     color::Rgb(r, g, b)
 }
 
-pub fn set_style(style: &Style) -> Result<String> {
+pub fn set_style(style: &Style) -> Result<String, Error> {
     if style.id == 0 {
         return Ok(format!("{}", termion::style::Invert));
     }
@@ -34,7 +34,7 @@ pub fn set_style(style: &Style) -> Result<String> {
     Ok(s)
 }
 
-pub fn reset_style(style: &Style) -> Result<String> {
+pub fn reset_style(style: &Style) -> Result<String, Error> {
     if style.id == 0 {
         return Ok(format!("{}", termion::style::NoInvert));
     }
