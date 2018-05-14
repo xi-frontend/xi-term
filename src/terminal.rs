@@ -5,14 +5,14 @@ use std::time::Duration;
 use futures::{Async, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
+use failure::{Error, ResultExt};
+
 use termion::terminal_size;
 use termion::input::MouseTerminal;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 use termion::event::Event;
 use termion::input::TermRead;
-
-use errors::*;
 
 pub struct Terminal {
     size: UnboundedReceiver<(u16, u16)>,
@@ -21,12 +21,13 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Result<Self, Error> {
         let (stdin_tx, stdin_rx) = unbounded();
         let (size_tx, size_rx) = unbounded();
-        let stdout = MouseTerminal::from(AlternateScreen::from(io::stdout()
-            .into_raw_mode()
-            .chain_err(|| "failed to put terminal into raw mode")?));
+        let stdout = MouseTerminal::from(AlternateScreen::from(
+            io::stdout()
+                .into_raw_mode()
+                .context("Failed to put terminal into raw mode")?));
 
         let term = Terminal {
             stdin: stdin_rx,
