@@ -5,8 +5,7 @@ use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
 use termion::event::{Event, Key};
-use tokio_core::reactor::Handle;
-use tokio_core::reactor::Core;
+use tokio::run;
 use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, FrontendBuilder,
           PluginStarted, PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update,
           UpdateCmds, ViewId};
@@ -23,7 +22,6 @@ pub struct Tui {
     pub views: HashMap<ViewId, View>,
     pub current_view: ViewId,
     pub events: UnboundedReceiver<CoreEvent>,
-    pub handle: Handle,
     pub client: Client,
     pub term: Terminal,
     pub term_size: (u16, u16),
@@ -33,7 +31,6 @@ pub struct Tui {
 
 impl Tui {
     pub fn new(
-        core: &mut Core,
         mut client: Client,
         events: UnboundedReceiver<CoreEvent>,
     ) -> Result<Self, Error> {
@@ -42,16 +39,15 @@ impl Tui {
         let conf_dir = BaseDirectories::with_prefix("xi")
             .ok()
             .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
-        core.run(
+        run(
             client
                 .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
                 .map_err(|_| ()),
-        ).unwrap();
+        );
         Ok(Tui {
             events,
             delayed_events: Vec::new(),
             pending_open_requests: Vec::new(),
-            handle: core.handle(),
             term: Terminal::new()?,
             term_size: (0, 0),
             views: HashMap::new(),
@@ -115,11 +111,10 @@ impl Tui {
 
     pub fn open(&mut self, file_path: String) {
         let client = self.client.clone();
-        let handle = self.handle.clone();
         let task = self.client
             .new_view(Some(file_path.clone()))
             .and_then(move |view_id| {
-                let view_client = ViewClient::new(client, handle, view_id);
+                let view_client = ViewClient::new(client, view_id);
                 Ok((view_id, View::new(view_client, Some(file_path))))
             });
         self.pending_open_requests.push(Box::new(task));
@@ -139,7 +134,7 @@ impl Tui {
 
     pub fn set_theme(&mut self, theme: &str) {
         let future = self.client.set_theme(theme).map_err(|_| ());
-        self.handle.spawn(future);
+        run(future);
     }
 
     fn process_open_requests(&mut self) {

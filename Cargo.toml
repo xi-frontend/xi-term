@@ -10,10 +10,10 @@ futures = "0.1.18"
 log = "0.4.1"
 log4rs = "0.8.0"
 termion = "1.5.1"
-tokio-core = "0.1.12"
+tokio = "0.1.7"
 xdg = "2.1.0"
 # xrl = "0.0.5"
-xrl = { git = "https://github.com/xi-frontend/xrl" }
+xrl = { git = "https://github.com/Bytebuddha/xrl" }
 
 [dependencies.clippy]
 optional = true
