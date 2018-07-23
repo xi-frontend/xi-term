@@ -13,7 +13,7 @@ extern crate log4rs;
 
 extern crate futures;
 extern crate termion;
-extern crate tokio_core;
+extern crate tokio;
 extern crate xdg;
 extern crate xrl;
 
@@ -25,7 +25,6 @@ use futures::{Future, Stream};
 use log::LevelFilter;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
-use tokio_core::reactor::Core;
 use xrl::spawn;
 use failure::{Error, ResultExt};
 
@@ -93,15 +92,11 @@ fn run() -> Result<(), Error> {
         configure_logs(logfile);
     }
 
-    info!("starting the event loop");
-    let mut core = Core::new().context("Failed to create event loop")?;
-
     info!("starting xi-core");
     let (tui_builder, core_events_rx) = TuiServiceBuilder::new();
     let (client, core_stderr) = spawn(
         matches.value_of("core").unwrap_or("xi-core"),
         tui_builder,
-        &core.handle(),
     );
 
     let error_logging = core_stderr
@@ -110,18 +105,23 @@ fn run() -> Result<(), Error> {
             Ok(())
         })
         .map_err(|_| ());
-    core.handle().spawn(error_logging);
+    ::std::thread::spawn(move || {
+        tokio::run(error_logging);
+    });
 
     info!("starting logging xi-core errors");
 
     info!("initializing the TUI");
-    let mut tui = Tui::new(&mut core, client, core_events_rx)
+    let mut tui = Tui::new(client, core_events_rx)
         .context("Failed to initialize the TUI")?;
 
     tui.open(matches.value_of("file").unwrap_or("").to_string());
     tui.set_theme("base16-eighties.dark");
 
     info!("spawning the TUI on the event loop");
-    core.run(tui)?;
+    tokio::run(tui.map_err(|err| {
+        error!("{}", err);
+        ()
+    }));
     Ok(())
 }
