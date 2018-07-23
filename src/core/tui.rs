@@ -13,8 +13,8 @@ use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, Front
 use xdg::BaseDirectories;
 use failure::Error;
 
-use terminal::{Terminal, TerminalEvent};
-use view::{View, ViewClient};
+use core::{Terminal, TerminalEvent};
+use widgets::{View, ViewClient};
 
 pub struct Tui {
     pub pending_open_requests: Vec<ClientResult<(ViewId, View)>>,
@@ -247,12 +247,6 @@ impl Tui {
     }
 }
 
-#[derive(Debug)]
-pub enum CoreEvent {
-    Update(Update),
-    ScrollTo(ScrollTo),
-    SetStyle(Style),
-}
 
 impl Future for Tui {
     type Item = ();
@@ -275,6 +269,13 @@ impl Future for Tui {
             Ok(Async::NotReady)
         }
     }
+}
+
+#[derive(Debug)]
+pub enum CoreEvent {
+    Update(Update),
+    ScrollTo(ScrollTo),
+    SetStyle(Style),
 }
 
 pub struct TuiService(UnboundedSender<CoreEvent>);
