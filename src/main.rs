@@ -114,8 +114,8 @@ fn run() -> Result<(), Error> {
     let mut tui = Tui::new(client, core_events_rx)
         .context("Failed to initialize the TUI")?;
 
-    tui.open(matches.value_of("file").unwrap_or("").to_string());
-    tui.set_theme("base16-eighties.dark");
+    tui.editor.open(matches.value_of("file").unwrap_or("").to_string());
+    tui.editor.set_theme("base16-eighties.dark");
 
     info!("spawning the TUI on the event loop");
     tokio::run(tui.map_err(|err| {
