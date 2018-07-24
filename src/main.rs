@@ -17,9 +17,8 @@ extern crate tokio;
 extern crate xdg;
 extern crate xrl;
 
-mod tui;
-mod terminal;
-mod view;
+mod core;
+mod widgets;
 
 use futures::{Future, Stream};
 use log::LevelFilter;
@@ -28,7 +27,7 @@ use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
 use failure::{Error, ResultExt};
 
-use tui::{Tui, TuiServiceBuilder};
+use core::{Tui, TuiServiceBuilder};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();
