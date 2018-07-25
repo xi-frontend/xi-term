@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, Write};
 
 use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
@@ -12,12 +12,13 @@ use xrl::{AvailablePlugins, Client, ConfigChanged, Frontend, FrontendBuilder,
 use xdg::BaseDirectories;
 use failure::Error;
 
-use core::{Terminal, TerminalEvent};
-use widgets::Editor;
+use core::{Terminal, TerminalEvent, Command};
+use widgets::{Editor, CommandPrompt};
 
 
 pub struct Tui {
     pub editor: Editor,
+    pub prompt: Option<CommandPrompt>,
     pub term: Terminal,
     pub term_size: (u16, u16),
     pub shutdown: bool,
@@ -40,27 +41,64 @@ impl Tui {
 
         Ok(Tui {
             term: Terminal::new()?,
+            shutdown: false,
             term_size: (0, 0),
             editor: Editor::new(client, events),
-            shutdown: false,
+            prompt: None,
         })
     }
+
     fn handle_resize(&mut self, size: (u16, u16)) {
         self.term_size = size;
         self.editor.handle_resize(size);
     }
+
     fn exit(&mut self) {
         self.shutdown = true;
     }
 
-    fn handle_input(&mut self, event: Event) {
-        if Event::Key(Key::Ctrl('c')) == event {
-            self.exit()
-        } else {
-            self.editor.handle_input(event)
+    pub fn handle_cmd(&mut self, cmd: Command) {
+        match cmd {
+            Command::Cancel => {
+                self.prompt = None;
+            },
+            Command::Quit => self.exit(),
+            Command::Save(view) => self.editor.save(view),
+            Command::Invalid(cmd) => {
+                error!("Received invalid editor command: {}", cmd);
+            }
         }
     }
 
+    /// Global keybindings can be parsed here
+    fn handle_input(&mut self, event: Event) {
+        match event {
+            Event::Key(Key::Ctrl('c')) => self.exit(),
+            Event::Key(Key::Char(':')) => {
+                if let Some(ref mut prompt) = self.prompt {
+                    prompt.handle_input(event);
+                } else {
+                    self.prompt = Some(CommandPrompt::default());
+                }
+            },
+            event => {
+                let mut out = None;
+                if let Some(ref mut prompt) = self.prompt {
+                    if let Some(cmd) = prompt.handle_input(event) {
+                        out = Some(cmd);
+                    }
+                } else {
+                    self.editor.handle_input(event);
+                }
+                if let Some(out) = out {
+                    self.handle_cmd(out);
+                    self.prompt = None;
+                }
+            }
+        }
+    }
+
+    /// Check and handle terminal events.
     fn process_terminal_events(&mut self) {
         let mut new_size: Option<(u16, u16)> = None;
         loop {
@@ -90,7 +128,14 @@ impl Tui {
     }
 
     fn render(&mut self) -> Result<(), Error> {
-        self.editor.render(self.term.stdout())?;
+        if let Some(ref mut prompt) = self.prompt {
+            prompt.render(self.term.stdout(), self.term_size.1)?;
+        } else {
+            self.editor.render(self.term.stdout())?;
+        }
+        if let Err(e) = self.term.stdout().flush() {
+            error!("failed to flush stdout: {}", e);
+        }
         Ok(())
     }
 }
@@ -125,6 +170,8 @@ impl Future for Tui {
     }
 }
 
+/// Actual frontend that implementes `xrl::Frontend`
+/// It's future is the main loop of xi-term.
 pub struct TuiService(UnboundedSender<CoreEvent>);
 
 impl TuiService {

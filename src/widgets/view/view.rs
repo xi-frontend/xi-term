@@ -65,6 +65,10 @@ impl View {
         );
     }
 
+    pub fn save(&mut self) {
+        self.client.save(self.file.as_ref().unwrap())
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(

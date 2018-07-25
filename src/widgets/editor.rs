@@ -25,6 +25,7 @@ pub struct Editor {
     pub styles: HashMap<u64, Style>,
 }
 
+/// Methods for general use.
 impl Editor {
     pub fn new(
         client: Client,
@@ -44,7 +45,29 @@ impl Editor {
             client,
         }
     }
+}
 
+/// Methods related to terminal input.
+impl Editor {
+    pub fn handle_input(&mut self, event: Event) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.handle_input(event)
+        }
+    }
+
+    pub fn handle_resize(&mut self, size: (u16, u16)) {
+        info!("setting new terminal size");
+        self.size = size;
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.resize(size.1);
+        } else {
+            warn!("view {} not found", self.current_view);
+        }
+    }
+}
+
+/// Methods related to handling things received from xi-core.
+impl Editor {
     pub fn dispatch_core_event(&mut self, event: CoreEvent) {
         match event {
             CoreEvent::Update(update) => self.handle_update(update),
@@ -70,16 +93,10 @@ impl Editor {
     fn handle_def_style(&mut self, style: Style) {
         self.styles.insert(style.id, style);
     }
+}
 
-    pub fn handle_resize(&mut self, size: (u16, u16)) {
-        info!("setting new terminal size");
-        self.size = size;
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.resize(size.1);
-        } else {
-            warn!("view {} not found", self.current_view);
-        }
-    }
+/// Methods related to sending xi requests.
+impl Editor {
 
     pub fn open(&mut self, file_path: String) {
         let client = self.client.clone();
@@ -92,17 +109,29 @@ impl Editor {
         self.pending_open_requests.push(Box::new(task));
     }
 
-    pub fn handle_input(&mut self, event: Event) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.handle_input(event)
-        }
-    }
-
     pub fn set_theme(&mut self, theme: &str) {
         let future = self.client.set_theme(theme).map_err(|_| ());
         run(future);
     }
 
+    pub fn save(&mut self, view: Option<ViewId>) {
+        match view {
+            Some(view_id) => {
+                if let Some(view) = self.views.get_mut(&view_id) {
+                    view.save();
+                }
+            },
+            None => {
+                if let Some(view) = self.views.get_mut(&self.current_view) {
+                    view.save();
+                }
+            }
+        }
+    }
+}
+
+/// Methods ment to be called by the tui struct
+impl Editor {
     pub fn process_open_requests(&mut self) {
         if self.pending_open_requests.is_empty() {
             return;
@@ -162,9 +191,6 @@ impl Editor {
     pub fn render<W: Write>(&mut self, term: &mut W) -> Result<(), Error> {
         if let Some(view) = self.views.get_mut(&self.current_view) {
             view.render(term, &self.styles)?;
-            if let Err(e) = term.flush() {
-                error!("failed to flush stdout: {}", e);
-            }
         }
         Ok(())
     }
