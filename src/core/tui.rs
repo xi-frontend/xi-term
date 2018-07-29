@@ -74,7 +74,7 @@ impl Tui {
     fn handle_input(&mut self, event: Event) {
         match event {
             Event::Key(Key::Ctrl('c')) => self.exit(),
-            Event::Key(Key::Ctrl(':')) => {
+            Event::Key(Key::Alt('x')) => {
                 if let Some(ref mut prompt) = self.prompt {
                     prompt.handle_input(event);
                 } else {

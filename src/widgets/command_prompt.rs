@@ -11,7 +11,7 @@ use core::Command;
 /// and is just disigned to get a simple base to work off of.
 #[derive(Debug, Default)]
 pub struct CommandPrompt {
-    keys: String
+    chars: String
 }
 
 impl CommandPrompt {
@@ -28,8 +28,8 @@ impl CommandPrompt {
     }
 
     fn back(&mut self) -> Option<Command> {
-        if self.keys.len() > 0 {
-            self.keys.pop();
+        if self.chars.len() > 0 {
+            self.chars.pop();
             None
         } else {
             Some(Command::Cancel)
@@ -37,13 +37,13 @@ impl CommandPrompt {
     }
 
     fn new_key(&mut self, chr: char) -> Option<Command> {
-        self.keys.push(chr);
+        self.chars.push(chr);
         None
     }
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Option<Command> {
-        let cmd = match &self.keys[..] {
+        let cmd = match &self.chars[..] {
             "s" | "save" => Some(Command::Save(None)),
             "q" | "quit" => Some(Command::Quit),
             invalid_command => {
@@ -51,13 +51,13 @@ impl CommandPrompt {
                 Some(Command::Invalid(invalid_command.to_owned()))
             }
         };
-        self.keys = String::new();
+        self.chars = String::new();
         cmd
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
         info!("Rendering Status bar at this Row: {}",row);
-        if let Err(err) = write!(w, "{}{}:{}", Goto(1, row), ClearLine, self.keys) {
+        if let Err(err) = write!(w, "{}{}:{}", Goto(1, row), ClearLine, self.chars) {
             error!("faile to render status bar: {:?}", err);
         }
         Ok(())
