@@ -1,32 +1,27 @@
 use std::io::{self, Write};
-use std::collections::HashMap;
 
 use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
 use termion::event::{Event, Key};
 use tokio::run;
-use xrl::{AvailablePlugins, Client, ClientResult, ConfigChanged, Frontend, FrontendBuilder,
+use xrl::{AvailablePlugins, Client, ConfigChanged, Frontend, FrontendBuilder,
           PluginStarted, PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update,
-          UpdateCmds, ViewId};
+          UpdateCmds};
 
 use xdg::BaseDirectories;
 use failure::Error;
 
-use core::{Terminal, TerminalEvent};
-use widgets::{View, ViewClient};
+use core::{Terminal, TerminalEvent, Command};
+use widgets::{Editor, CommandPrompt};
+
 
 pub struct Tui {
-    pub pending_open_requests: Vec<ClientResult<(ViewId, View)>>,
-    pub delayed_events: Vec<CoreEvent>,
-    pub views: HashMap<ViewId, View>,
-    pub current_view: ViewId,
-    pub events: UnboundedReceiver<CoreEvent>,
-    pub client: Client,
+    pub editor: Editor,
+    pub prompt: Option<CommandPrompt>,
     pub term: Terminal,
     pub term_size: (u16, u16),
     pub shutdown: bool,
-    pub styles: HashMap<u64, Style>,
 }
 
 impl Tui {
@@ -34,8 +29,7 @@ impl Tui {
         mut client: Client,
         events: UnboundedReceiver<CoreEvent>,
     ) -> Result<Self, Error> {
-        let mut styles = HashMap::new();
-        styles.insert(0, Default::default());
+
         let conf_dir = BaseDirectories::with_prefix("xi")
             .ok()
             .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
@@ -44,142 +38,75 @@ impl Tui {
                 .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
                 .map_err(|_| ()),
         );
+
         Ok(Tui {
-            events,
-            delayed_events: Vec::new(),
-            pending_open_requests: Vec::new(),
             term: Terminal::new()?,
-            term_size: (0, 0),
-            views: HashMap::new(),
-            styles,
-            current_view: ViewId(0),
-            client,
             shutdown: false,
+            term_size: (0, 0),
+            editor: Editor::new(client, events),
+            prompt: None,
         })
     }
 
-    fn dispatch_core_event(&mut self, event: CoreEvent) {
-        match event {
-            CoreEvent::Update(update) => self.handle_update(update),
-            CoreEvent::SetStyle(style) => self.handle_def_style(style),
-            CoreEvent::ScrollTo(scroll_to) => self.handle_scroll_to(scroll_to),
-        }
-    }
-
-    fn handle_update(&mut self, update: Update) {
-        let Tui {
-            ref mut views,
-            ref mut delayed_events,
-            ..
-        } = *self;
-        match views.get_mut(&update.view_id) {
-            Some(view) => view.update_cache(update),
-            None => delayed_events.push(CoreEvent::Update(update)),
-        }
-    }
-
-    fn handle_scroll_to(&mut self, scroll_to: ScrollTo) {
-        let Tui {
-            ref mut views,
-            ref mut delayed_events,
-            ..
-        } = *self;
-        match views.get_mut(&scroll_to.view_id) {
-            Some(view) => view.set_cursor(scroll_to.line, scroll_to.column),
-            None => delayed_events.push(CoreEvent::ScrollTo(scroll_to)),
-        }
-    }
-
-    fn handle_def_style(&mut self, style: Style) {
-        self.styles.insert(style.id, style);
-    }
-
     fn handle_resize(&mut self, size: (u16, u16)) {
-        let Tui {
-            ref mut views,
-            ref current_view,
-            ..
-        } = *self;
-        info!("setting new terminal size");
         self.term_size = size;
-        if let Some(view) = views.get_mut(current_view) {
-            view.resize(size.1);
-        } else {
-            warn!("view {} not found", current_view);
-        }
-    }
-
-    pub fn open(&mut self, file_path: String) {
-        let client = self.client.clone();
-        let task = self.client
-            .new_view(Some(file_path.clone()))
-            .and_then(move |view_id| {
-                let view_client = ViewClient::new(client, view_id);
-                Ok((view_id, View::new(view_client, Some(file_path))))
-            });
-        self.pending_open_requests.push(Box::new(task));
+        self.editor.handle_resize(size);
     }
 
     fn exit(&mut self) {
         self.shutdown = true;
     }
 
-    fn handle_input(&mut self, event: Event) {
-        if Event::Key(Key::Ctrl('c')) == event {
-            self.exit()
-        } else if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.handle_input(event)
-        }
-    }
-
-    pub fn set_theme(&mut self, theme: &str) {
-        let future = self.client.set_theme(theme).map_err(|_| ());
-        run(future);
-    }
-
-    fn process_open_requests(&mut self) {
-        if self.pending_open_requests.is_empty() {
-            return;
-        }
-
-        info!("process pending open requests");
-
-        let Tui {
-            ref mut pending_open_requests,
-            ref mut views,
-            ref mut current_view,
-            ref term_size,
-            ..
-        } = *self;
-
-        let mut done = vec![];
-        for (idx, task) in pending_open_requests.iter_mut().enumerate() {
-            match task.poll() {
-                Ok(Async::Ready((id, mut view))) => {
-                    info!("open request succeeded for {}", &id);
-                    done.push(idx);
-                    view.resize(term_size.1);
-                    views.insert(id, view);
-                    *current_view = id;
-                }
-                Ok(Async::NotReady) => continue,
-                Err(e) => panic!("\"open\" task failed: {}", e),
+    pub fn handle_cmd(&mut self, cmd: Command) {
+        match cmd {
+            Command::Cancel => {
+                self.prompt = None;
+            },
+            Command::Quit => self.exit(),
+            Command::Save(view) => self.editor.save(view),
+            Command::Invalid(cmd) => {
+                error!("Received invalid editor command: {}", cmd);
             }
         }
-        for idx in done.iter().rev() {
-            pending_open_requests.remove(*idx);
-        }
+    }
 
-        if pending_open_requests.is_empty() {
-            info!("no more pending open request");
+    /// Global keybindings can be parsed here
+    fn handle_input(&mut self, event: Event) {
+        match event {
+            Event::Key(Key::Ctrl('c')) => self.exit(),
+            Event::Key(Key::Alt('x')) => {
+                if let Some(ref mut prompt) = self.prompt {
+                    prompt.handle_input(&event);
+                } else {
+                    self.prompt = Some(CommandPrompt::default());
+                }
+            },
+            event => {
+                // No command prompt is active, process the event normally.
+                if self.prompt.is_none() {
+                    self.editor.handle_input(event);
+                    return;
+                }
+
+                // A command prompt is active.
+                let mut prompt = self.prompt.take().unwrap();
+                if let Some(cmd) = prompt.handle_input(&event) {
+                    // The event resulted in a command to process
+                    self.handle_cmd(cmd);
+                } else {
+                    // Still not command, just update the prompt
+                    self.prompt = Some(prompt);
+                }
+            }
         }
     }
 
+    /// Check and handle terminal events.
     fn process_terminal_events(&mut self) {
         let mut new_size: Option<(u16, u16)> = None;
         loop {
             match self.term.poll() {
-                Ok(Async::Ready(Some(event))) => match event {
+                 Ok(Async::Ready(Some(event))) => match event {
                     TerminalEvent::Resize(size) => {
                         new_size = Some(size);
                     }
@@ -203,45 +130,14 @@ impl Tui {
         }
     }
 
-    fn process_core_events(&mut self) {
-        loop {
-            match self.events.poll() {
-                Ok(Async::Ready(Some(event))) => {
-                    self.dispatch_core_event(event);
-                }
-                Ok(Async::Ready(None)) => {
-                    error!("core stdout shut down => panicking");
-                    panic!("core stdout shut down");
-                }
-                Ok(Async::NotReady) => break,
-                Err(_) => {
-                    error!("error while polling core => panicking");
-                    panic!("error while polling core");
-                }
-            }
-        }
-    }
-
-    fn process_delayed_events(&mut self) {
-        let delayed_events: Vec<CoreEvent> = self.delayed_events.drain(..).collect();
-        for event in delayed_events {
-            self.dispatch_core_event(event);
-        }
-    }
-
     fn render(&mut self) -> Result<(), Error> {
-        let Tui {
-            ref mut views,
-            ref mut term,
-            ref current_view,
-            ref styles,
-            ..
-        } = *self;
-        if let Some(view) = views.get_mut(current_view) {
-            view.render(term.stdout(), styles)?;
-            if let Err(e) = term.stdout().flush() {
-                error!("failed to flush stdout: {}", e);
-            }
+        if let Some(ref mut prompt) = self.prompt {
+            prompt.render(self.term.stdout(), self.term_size.1)?;
+        } else {
+            self.editor.render(self.term.stdout())?;
+        }
+        if let Err(e) = self.term.stdout().flush() {
+            error!("failed to flush stdout: {}", e);
         }
         Ok(())
     }
@@ -259,10 +155,10 @@ impl Future for Tui {
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.process_open_requests();
-        self.process_delayed_events();
+        self.editor.process_open_requests();
+        self.editor.process_delayed_events();
         self.process_terminal_events();
-        self.process_core_events();
+        self.editor.process_core_events();
 
         if let Err(e) = self.render() {
             error!("error: {}", e);
@@ -277,6 +173,8 @@ impl Future for Tui {
     }
 }
 
+/// Actual frontend that implementes `xrl::Frontend`
+/// It's future is the main loop of xi-term.
 pub struct TuiService(UnboundedSender<CoreEvent>);
 
 impl TuiService {

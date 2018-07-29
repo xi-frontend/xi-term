@@ -14,10 +14,13 @@ use termion::screen::AlternateScreen;
 use termion::event::Event;
 use termion::input::TermRead;
 
+/// Simple type alias for the Write implementer we render to.
+pub type RenderTarget = MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>;
+
 pub struct Terminal {
     size: UnboundedReceiver<(u16, u16)>,
     stdin: UnboundedReceiver<Event>,
-    stdout: MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>,
+    stdout: RenderTarget,
 }
 
 impl Terminal {
@@ -83,7 +86,7 @@ impl Terminal {
         });
     }
 
-    pub fn stdout(&mut self) -> &mut MouseTerminal<AlternateScreen<RawTerminal<Stdout>>> {
+    pub fn stdout(&mut self) -> &mut RenderTarget {
         &mut self.stdout
     }
 }
