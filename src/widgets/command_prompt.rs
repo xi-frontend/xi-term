@@ -17,18 +17,18 @@ pub struct CommandPrompt {
 impl CommandPrompt {
 
     /// Process a terminal event for the command prompt.
-    pub fn handle_input(&mut self, input: Event) -> Option<Command> {
+    pub fn handle_input(&mut self, input: &Event) -> Option<Command> {
         // TODO: not ignore arrow keys
         match input {
             Event::Key(Key::Char('\n')) => self.finalize(),
             Event::Key(Key::Backspace) => self.back(),
-            Event::Key(Key::Char(chr)) => self.new_key(chr),
+            Event::Key(Key::Char(chr)) => self.new_key(*chr),
             _ => None
         }
     }
 
     fn back(&mut self) -> Option<Command> {
-        if self.chars.len() > 0 {
+        if self.chars.is_empty() {
             self.chars.pop();
             None
         } else {

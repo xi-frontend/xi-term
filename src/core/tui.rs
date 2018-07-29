@@ -76,7 +76,7 @@ impl Tui {
             Event::Key(Key::Ctrl('c')) => self.exit(),
             Event::Key(Key::Alt('x')) => {
                 if let Some(ref mut prompt) = self.prompt {
-                    prompt.handle_input(event);
+                    prompt.handle_input(&event);
                 } else {
                     self.prompt = Some(CommandPrompt::default());
                 }
@@ -90,7 +90,7 @@ impl Tui {
 
                 // A command prompt is active.
                 let mut prompt = self.prompt.take().unwrap();
-                if let Some(cmd) = prompt.handle_input(event) {
+                if let Some(cmd) = prompt.handle_input(&event) {
                     // The event resulted in a command to process
                     self.handle_cmd(cmd);
                 } else {
