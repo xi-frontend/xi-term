@@ -82,17 +82,20 @@ impl Tui {
                 }
             },
             event => {
-                let mut out = None;
-                if let Some(ref mut prompt) = self.prompt {
-                    if let Some(cmd) = prompt.handle_input(event) {
-                        out = Some(cmd);
-                    }
-                } else {
+                // No command prompt is active, process the event normally.
+                if self.prompt.is_none() {
                     self.editor.handle_input(event);
+                    return;
                 }
-                if let Some(out) = out {
-                    self.handle_cmd(out);
-                    self.prompt = None;
+
+                // A command prompt is active.
+                let mut prompt = self.prompt.take().unwrap();
+                if let Some(cmd) = prompt.handle_input(event) {
+                    // The event resulted in a command to process
+                    self.handle_cmd(cmd);
+                } else {
+                    // Still not command, just update the prompt
+                    self.prompt = Some(prompt);
                 }
             }
         }
