@@ -1,6 +1,6 @@
 use futures::Future;
-use xrl;
 use tokio::spawn;
+use xrl;
 
 pub struct Client {
     inner: xrl::Client,

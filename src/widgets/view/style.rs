@@ -1,6 +1,6 @@
 use std::fmt::Write;
-use termion::color;
 use termion;
+use termion::color;
 use xrl::Style;
 
 use failure::Error;
