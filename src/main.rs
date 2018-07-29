@@ -20,12 +20,12 @@ extern crate xrl;
 mod core;
 mod widgets;
 
+use failure::{Error, ResultExt};
 use futures::{Future, Stream};
 use log::LevelFilter;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
-use failure::{Error, ResultExt};
 
 use core::{Tui, TuiServiceBuilder};
 
@@ -93,10 +93,7 @@ fn run() -> Result<(), Error> {
 
     info!("starting xi-core");
     let (tui_builder, core_events_rx) = TuiServiceBuilder::new();
-    let (client, core_stderr) = spawn(
-        matches.value_of("core").unwrap_or("xi-core"),
-        tui_builder,
-    );
+    let (client, core_stderr) = spawn(matches.value_of("core").unwrap_or("xi-core"), tui_builder);
 
     let error_logging = core_stderr
         .for_each(|msg| {
@@ -111,10 +108,10 @@ fn run() -> Result<(), Error> {
     info!("starting logging xi-core errors");
 
     info!("initializing the TUI");
-    let mut tui = Tui::new(client, core_events_rx)
-        .context("Failed to initialize the TUI")?;
+    let mut tui = Tui::new(client, core_events_rx).context("Failed to initialize the TUI")?;
 
-    tui.editor.open(matches.value_of("file").unwrap_or("").to_string());
+    tui.editor
+        .open(matches.value_of("file").unwrap_or("").to_string());
     tui.editor.set_theme("base16-eighties.dark");
 
     info!("spawning the TUI on the event loop");

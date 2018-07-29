@@ -1,8 +1,8 @@
-use std::io::Write;
 use std::collections::HashMap;
+use std::io::Write;
 
-use futures::{Async, Future, Stream};
 use futures::sync::mpsc::UnboundedReceiver;
+use futures::{Async, Future, Stream};
 
 use termion::event::Event;
 use tokio::run;
@@ -27,10 +27,7 @@ pub struct Editor {
 
 /// Methods for general use.
 impl Editor {
-    pub fn new(
-        client: Client,
-        events: UnboundedReceiver<CoreEvent>,
-    ) -> Editor {
+    pub fn new(client: Client, events: UnboundedReceiver<CoreEvent>) -> Editor {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
 
@@ -97,10 +94,10 @@ impl Editor {
 
 /// Methods related to sending xi requests.
 impl Editor {
-
     pub fn open(&mut self, file_path: String) {
         let client = self.client.clone();
-        let task = self.client
+        let task = self
+            .client
             .new_view(Some(file_path.clone()))
             .and_then(move |view_id| {
                 let view_client = ViewClient::new(client, view_id);
@@ -120,7 +117,7 @@ impl Editor {
                 if let Some(view) = self.views.get_mut(&view_id) {
                     view.save();
                 }
-            },
+            }
             None => {
                 if let Some(view) = self.views.get_mut(&self.current_view) {
                     view.save();

@@ -1,21 +1,20 @@
-use termion::event::{Event, Key};
-use std::io::Write;
 use std::io::Error;
+use std::io::Write;
+use termion::event::{Event, Key};
 
+use core::Command;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
-use core::Command;
 
 /// Command prompt for xi-term.
 /// currently this is heavily inspired by vim
 /// and is just disigned to get a simple base to work off of.
 #[derive(Debug, Default)]
 pub struct CommandPrompt {
-    chars: String
+    chars: String,
 }
 
 impl CommandPrompt {
-
     /// Process a terminal event for the command prompt.
     pub fn handle_input(&mut self, input: &Event) -> Option<Command> {
         // TODO: not ignore arrow keys
@@ -23,7 +22,7 @@ impl CommandPrompt {
             Event::Key(Key::Char('\n')) => self.finalize(),
             Event::Key(Key::Backspace) => self.back(),
             Event::Key(Key::Char(chr)) => self.new_key(*chr),
-            _ => None
+            _ => None,
         }
     }
 
@@ -56,7 +55,7 @@ impl CommandPrompt {
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
-        info!("Rendering Status bar at this Row: {}",row);
+        info!("Rendering Status bar at this Row: {}", row);
         if let Err(err) = write!(w, "{}{}:{}", Goto(1, row), ClearLine, self.chars) {
             error!("faile to render status bar: {:?}", err);
         }

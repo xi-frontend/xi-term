@@ -1,20 +1,20 @@
 use std::io::{self, Write};
 
-use futures::{future, Async, Future, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
+use futures::{future, Async, Future, Poll, Sink, Stream};
 
 use termion::event::{Event, Key};
 use tokio::run;
-use xrl::{AvailablePlugins, Client, ConfigChanged, Frontend, FrontendBuilder,
-          PluginStarted, PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update,
-          UpdateCmds};
+use xrl::{
+    AvailablePlugins, Client, ConfigChanged, Frontend, FrontendBuilder, PluginStarted,
+    PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update, UpdateCmds,
+};
 
-use xdg::BaseDirectories;
 use failure::Error;
+use xdg::BaseDirectories;
 
-use core::{Terminal, TerminalEvent, Command};
-use widgets::{Editor, CommandPrompt};
-
+use core::{Command, Terminal, TerminalEvent};
+use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
     pub editor: Editor,
@@ -25,19 +25,13 @@ pub struct Tui {
 }
 
 impl Tui {
-    pub fn new(
-        mut client: Client,
-        events: UnboundedReceiver<CoreEvent>,
-    ) -> Result<Self, Error> {
-
+    pub fn new(mut client: Client, events: UnboundedReceiver<CoreEvent>) -> Result<Self, Error> {
         let conf_dir = BaseDirectories::with_prefix("xi")
             .ok()
             .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
-        run(
-            client
-                .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
-                .map_err(|_| ()),
-        );
+        run(client
+            .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
+            .map_err(|_| ()));
 
         Ok(Tui {
             term: Terminal::new()?,
@@ -61,7 +55,7 @@ impl Tui {
         match cmd {
             Command::Cancel => {
                 self.prompt = None;
-            },
+            }
             Command::Quit => self.exit(),
             Command::Save(view) => self.editor.save(view),
             Command::Invalid(cmd) => {
@@ -80,7 +74,7 @@ impl Tui {
                 } else {
                     self.prompt = Some(CommandPrompt::default());
                 }
-            },
+            }
             event => {
                 // No command prompt is active, process the event normally.
                 if self.prompt.is_none() {
@@ -106,7 +100,7 @@ impl Tui {
         let mut new_size: Option<(u16, u16)> = None;
         loop {
             match self.term.poll() {
-                 Ok(Async::Ready(Some(event))) => match event {
+                Ok(Async::Ready(Some(event))) => match event {
                     TerminalEvent::Resize(size) => {
                         new_size = Some(size);
                     }

@@ -11,5 +11,5 @@ pub enum Command {
     Quit,
     /// Save the current file buffer
     Save(Option<ViewId>),
-    Invalid(String)
+    Invalid(String),
 }

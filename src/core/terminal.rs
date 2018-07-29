@@ -2,17 +2,17 @@ use std::io::{self, Stdout};
 use std::thread::{sleep, spawn};
 use std::time::Duration;
 
-use futures::{Async, Poll, Sink, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
+use futures::{Async, Poll, Sink, Stream};
 
 use failure::{Error, ResultExt};
 
-use termion::terminal_size;
+use termion::event::Event;
 use termion::input::MouseTerminal;
+use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
-use termion::event::Event;
-use termion::input::TermRead;
+use termion::terminal_size;
 
 /// Simple type alias for the Write implementer we render to.
 pub type RenderTarget = MouseTerminal<AlternateScreen<RawTerminal<Stdout>>>;
@@ -30,7 +30,8 @@ impl Terminal {
         let stdout = MouseTerminal::from(AlternateScreen::from(
             io::stdout()
                 .into_raw_mode()
-                .context("Failed to put terminal into raw mode")?));
+                .context("Failed to put terminal into raw mode")?,
+        ));
 
         let term = Terminal {
             stdin: stdin_rx,

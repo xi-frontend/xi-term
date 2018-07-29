@@ -4,5 +4,5 @@ mod style;
 mod view;
 mod window;
 
-pub use self::view::View;
 pub use self::client::Client as ViewClient;
+pub use self::view::View;

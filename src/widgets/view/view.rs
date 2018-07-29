@@ -1,15 +1,15 @@
-use std::io::Write;
 use std::collections::HashMap;
+use std::io::Write;
 
-use termion::event::{Event, Key, MouseButton, MouseEvent};
+use failure::Error;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
+use termion::event::{Event, Key, MouseButton, MouseEvent};
 use xrl::{Line, LineCache, Style, Update};
-use failure::Error;
 
-use super::window::Window;
-use super::style::{reset_style, set_style};
 use super::client::Client;
+use super::style::{reset_style, set_style};
+use super::window::Window;
 
 const TAB_LENGTH: u16 = 4;
 
@@ -48,8 +48,11 @@ impl View {
         self.window.set_cursor(&self.cursor);
     }
 
-    pub fn render<W: Write>(&mut self, w: &mut W, styles: &HashMap<u64, Style>)
-                            -> Result<(), Error> {
+    pub fn render<W: Write>(
+        &mut self,
+        w: &mut W,
+        styles: &HashMap<u64, Style>,
+    ) -> Result<(), Error> {
         self.update_window();
         self.render_lines(w, styles)?;
         self.render_cursor(w);
@@ -147,13 +150,13 @@ impl View {
         }
     }
 
-    fn render_lines<W: Write>(&self, w: &mut W, styles: &HashMap<u64, Style>)
-                              -> Result<(), Error> {
+    fn render_lines<W: Write>(&self, w: &mut W, styles: &HashMap<u64, Style>) -> Result<(), Error> {
         debug!("rendering lines");
         trace!("current cache\n{:?}", self.cache);
 
         // Get the lines that are within the displayed window
-        let lines = self.cache
+        let lines = self
+            .cache
             .lines()
             .iter()
             .skip(self.window.start() as usize)
@@ -292,7 +295,8 @@ impl View {
         // the string, but characters may have various lengths. For the moment, we only handle
         // tabs, and we assume the terminal has tabstops of TAB_LENGTH. We consider that all the
         // other characters have a width of 1.
-        let column = line.text
+        let column = line
+            .text
             .chars()
             .take(self.cursor.column as usize)
             .fold(0, add_char_width);
