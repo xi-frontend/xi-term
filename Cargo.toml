@@ -14,7 +14,3 @@ tokio = "0.1.7"
 xdg = "2.1.0"
 # xrl = "0.0.5"
 xrl = { git = "https://github.com/xi-frontend/xrl" }
-
-[dependencies.clippy]
-optional = true
-version = "0.0.197"
