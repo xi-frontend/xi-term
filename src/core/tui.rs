@@ -58,6 +58,7 @@ impl Tui {
             }
             Command::Quit => self.exit(),
             Command::Save(view) => self.editor.save(view),
+            Command::Open(file) => self.editor.open(file),
             Command::SetTheme(theme) => self.editor.set_theme(&theme),
             Command::Invalid(cmd) => {
                 error!("Received invalid editor command: {}", cmd);

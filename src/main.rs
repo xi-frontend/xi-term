@@ -110,8 +110,7 @@ fn run() -> Result<(), Error> {
     info!("initializing the TUI");
     let mut tui = Tui::new(client, core_events_rx).context("Failed to initialize the TUI")?;
 
-    tui.editor
-        .open(matches.value_of("file").unwrap_or("").to_string());
+    tui.handle_cmd(Command::Open(matches.value_of("file").map(|x|x.to_string())));
     tui.handle_cmd(Command::SetTheme("base16-eighties.dark".into()));
 
     info!("spawning the TUI on the event loop");

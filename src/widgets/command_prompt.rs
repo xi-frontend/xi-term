@@ -42,6 +42,7 @@ impl CommandPrompt {
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Option<Command> {
+        // TODO: Clean this up.
         let cmd = match &self.chars[..] {
             "s" | "save" => Some(Command::Save(None)),
             "q" | "quit" => Some(Command::Quit),
@@ -54,6 +55,24 @@ impl CommandPrompt {
                             Some(Command::SetTheme(command[6..].to_owned()))
                         } else {
                             error!("Received invalid theme: {:?}", &command[6..]);
+                            None
+                        }
+                    },
+                    "o" => {
+                        if &command[1..2] == " " {
+                            if command[2..].len() > 0 {
+                                Some(Command::Open(Some(command[2..].to_owned())))
+                            } else {
+                                Some(Command::Open(None))
+                            }
+                        } else if &command[0..5] == "open " {
+                            if command[5..].len() > 0 {
+                                Some(Command::Open(Some(command[5..].to_owned())))
+                            } else {
+                                Some(Command::Open(None))
+                            }
+                        } else {
+                            error!("Received invalid theme: {:?}", &command[5..]);
                             None
                         }
                     },
