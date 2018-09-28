@@ -2,7 +2,7 @@ use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
 
-use core::Command;
+use core::{Command, ParseCommandError};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
@@ -19,32 +19,37 @@ pub struct CommandPrompt {
 
 impl CommandPrompt {
     /// Process a terminal event for the command prompt.
-    pub fn handle_input(&mut self, input: &Event) -> Option<Command> {
-        // TODO: not ignore arrow keys
+    pub fn handle_input(&mut self, input: &Event) -> Result<Option<Command>, ParseCommandError> {
         match input {
             Event::Key(Key::Char('\n')) => self.finalize(),
-            Event::Key(Key::Backspace) => self.back(),
-            Event::Key(Key::Delete) => {
-                if self.dex < self.chars.len() {
-                    self.chars.remove(self.dex);
-                }
-                None
-            }
-            Event::Key(Key::Left) => {
-                if self.dex > 0 {
-                    self.dex -= 1;
-                }
-                None
-            },
-            Event::Key(Key::Right) => {
-                if self.dex+1 < self.chars.len() {
-                    self.dex += 1;
-                }
-                None
-            },
-            Event::Key(Key::Char(chr)) => self.new_key(*chr),
-            _ => None,
+            Event::Key(Key::Backspace) => Ok(self.back()),
+            Event::Key(Key::Delete) => Ok(self.delete()),
+            Event::Key(Key::Left) => Ok(self.left()),
+            Event::Key(Key::Right) => Ok(self.right()),
+            Event::Key(Key::Char(chr)) => Ok(self.new_key(*chr)),
+            _ => Ok(None),
         }
+    }
+
+    fn left(&mut self) -> Option<Command> {
+        if self.dex > 0 {
+            self.dex -= 1;
+        }
+        None
+    }
+
+    fn right(&mut self) -> Option<Command> {
+        if self.dex < self.chars.len() {
+            self.dex += 1;
+        }
+        None
+    }
+
+    fn delete(&mut self) -> Option<Command> {
+        if self.dex < self.chars.len() {
+            self.chars.remove(self.dex);
+        }
+        None
     }
 
     fn back(&mut self) -> Option<Command> {
@@ -57,6 +62,7 @@ impl CommandPrompt {
         }
     }
 
+    /// Gets called when any character is pressed.
     fn new_key(&mut self, chr: char) -> Option<Command> {
         self.chars.insert(self.dex, chr);
         self.dex += 1;
@@ -64,18 +70,11 @@ impl CommandPrompt {
     }
 
     /// Gets called when return is pressed,
-    fn finalize(&mut self) -> Option<Command> {
-        match FromStr::from_str(&self.chars) {
-            Ok(cmd) => Some(cmd),
-            Err(err) => {
-                error!("Failed to parse Command: {:?}", err);
-                None
-            }
-        }
+    fn finalize(&mut self) -> Result<Option<Command>, ParseCommandError> {
+        Ok(Some(FromStr::from_str(&self.chars)?))
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
-        info!("Rendering Status bar at this Row: {}", row);
         if let Err(err) = write!(w, "{}{}:{}{}", Goto(1, row), ClearLine, self.chars, Goto(self.dex as u16+2, row)) {
             error!("faile to render status bar: {:?}", err);
         }

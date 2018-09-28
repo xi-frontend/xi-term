@@ -7,23 +7,28 @@ use std::str::FromStr;
 /// currently commands can only be input through the CommandPrompt. Vim style.
 #[derive(Debug)]
 pub enum Command {
-    /// Close the CommandPrompt
+    /// Close the CommandPrompt.
     Cancel,
     /// Quit editor.
     Quit,
-    /// Save the current file buffer
+    /// Save the current file buffer.
     Save(Option<ViewId>),
     /// Open A new file.
     Open(Option<String>),
     /// Change the syntax theme.
-    SetTheme(String)
+    SetTheme(String),
 }
 
 #[derive(Debug)]
 pub enum ParseCommandError {
-    NoTheme,
+    /// Didnt expect a command to take an argument.
     UnexpectedArgument,
-    UnknownCommand(String)
+    /// The given command expected an argument.
+    ExpectedArgument { cmd: String, expected: usize , found: usize},
+    /// The given command was given to many arguments.
+    ToManyArguments{ cmd: String, expected: usize, found: usize},
+    /// Invalid input was received.
+    UnknownCommand(String),
 }
 
 impl FromStr for Command {
@@ -35,11 +40,22 @@ impl FromStr for Command {
             "q" | "quit" => Ok(Command::Quit),
             command => {
                 let mut parts: Vec<&str> = command.split(" ").collect();
+
                 let cmd = parts.remove(0);
                 match cmd {
                     "t" | "theme" => {
                         if parts.len() == 0 {
-                            Err(ParseCommandError::NoTheme)
+                            Err(ParseCommandError::ExpectedArgument {
+                                cmd: "theme".into(),
+                                expected: 1,
+                                found: 0
+                            })
+                        } else if parts.len() > 1 {
+                            Err(ParseCommandError::ToManyArguments {
+                                cmd: cmd.to_owned(),
+                                expected: 1,
+                                found: parts.len()
+                            })
                         } else {
                             Ok(Command::SetTheme(parts[0].to_owned()))
                         }
