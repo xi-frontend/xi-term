@@ -101,7 +101,7 @@ impl Editor {
             .new_view(file_path.clone())
             .and_then(move |view_id| {
                 let view_client = ViewClient::new(client, view_id);
-                Ok((view_id, View::new(view_client, Some(file_path.unwrap_or("".into())))))
+                Ok((view_id, View::new(view_client, Some(file_path.unwrap_or_else(|| "".into())))))
             });
         self.pending_open_requests.push(Box::new(task));
     }

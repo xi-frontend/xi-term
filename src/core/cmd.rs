@@ -1,6 +1,6 @@
 //! Command system for xi-term. A command represents
-//! a task the user wants the editor to preform, currently
-//! commands can only be input through the CommandPrompt. Vim style.
+//! a task the user wants the editor to preform,
+/// currently commands can only be input through the CommandPrompt. Vim style.
 
 use xrl::ViewId;
 
@@ -40,12 +40,12 @@ impl FromStr for Command {
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" => Ok(Command::Quit),
             command => {
-                let mut parts: Vec<&str> = command.split(" ").collect();
+                let mut parts: Vec<&str> = command.split(' ').collect();
 
                 let cmd = parts.remove(0);
                 match cmd {
                     "t" | "theme" => {
-                        if parts.len() == 0 {
+                        if parts.is_empty() {
                             Err(ParseCommandError::ExpectedArgument {
                                 cmd: "theme".into(),
                                 expected: 1,
@@ -62,14 +62,12 @@ impl FromStr for Command {
                         }
                     },
                     "o" | "open" => {
-                        if parts.len() == 0 {
+                        if parts.is_empty() {
                             Ok(Command::Open(None))
+                        } else if parts.len() > 1 {
+                            Err(ParseCommandError::UnexpectedArgument)
                         } else {
-                            if parts.len() > 1 {
-                                Err(ParseCommandError::UnexpectedArgument)
-                            } else {
-                                Ok(Command::Open(Some(parts[0].to_owned())))
-                            }
+                            Ok(Command::Open(Some(parts[0].to_owned())))
                         }
                     }
                     _ => Err(ParseCommandError::UnknownCommand(command.into()))
