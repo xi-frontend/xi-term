@@ -1,10 +1,11 @@
+//! Command system for xi-term. A command represents
+//! a task the user wants the editor to preform, currently
+//! commands can only be input through the CommandPrompt. Vim style.
+
 use xrl::ViewId;
 
 use std::str::FromStr;
 
-/// Command system for xi-term.
-/// A command represents a task the user wants the editor to preform,
-/// currently commands can only be input through the CommandPrompt. Vim style.
 #[derive(Debug)]
 pub enum Command {
     /// Close the CommandPrompt.

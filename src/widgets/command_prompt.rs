@@ -1,3 +1,7 @@
+//! Command prompt for xi-term. currently this is
+//! heavily inspired by vim and is just designed to
+//! get a simple base to work off of.
+
 use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
@@ -8,9 +12,6 @@ use termion::cursor::Goto;
 
 use std::str::FromStr;
 
-/// Command prompt for xi-term.
-/// currently this is heavily inspired by vim
-/// and is just disigned to get a simple base to work off of.
 #[derive(Debug, Default)]
 pub struct CommandPrompt {
     dex: usize,
