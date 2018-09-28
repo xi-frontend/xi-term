@@ -6,6 +6,8 @@ use core::Command;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
+use std::str::FromStr;
+
 /// Command prompt for xi-term.
 /// currently this is heavily inspired by vim
 /// and is just disigned to get a simple base to work off of.
@@ -42,47 +44,7 @@ impl CommandPrompt {
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Option<Command> {
-        // TODO: Clean this up.
-        let cmd = match &self.chars[..] {
-            "s" | "save" => Some(Command::Save(None)),
-            "q" | "quit" => Some(Command::Quit),
-            command => {
-                match &command[0..1] {
-                    "t" => {
-                        if &command[1..2] == " " {
-                            Some(Command::SetTheme(command[2..].to_owned()))
-                        } else if &command[0..6] == "theme " {
-                            Some(Command::SetTheme(command[6..].to_owned()))
-                        } else {
-                            error!("Received invalid theme: {:?}", &command[6..]);
-                            None
-                        }
-                    },
-                    "o" => {
-                        if &command[1..2] == " " {
-                            if command[2..].len() > 0 {
-                                Some(Command::Open(Some(command[2..].to_owned())))
-                            } else {
-                                Some(Command::Open(None))
-                            }
-                        } else if &command[0..5] == "open " {
-                            if command[5..].len() > 0 {
-                                Some(Command::Open(Some(command[5..].to_owned())))
-                            } else {
-                                Some(Command::Open(None))
-                            }
-                        } else {
-                            error!("Received invalid theme: {:?}", &command[5..]);
-                            None
-                        }
-                    },
-                    _ => {
-                        error!("Received invalid command: {:?}", command);
-                        Some(Command::Invalid(command.to_owned()))
-                    }
-                }
-            }
-        };
+        let cmd = FromStr::from_str(&self.chars).ok();
         self.chars = String::new();
         cmd
     }
