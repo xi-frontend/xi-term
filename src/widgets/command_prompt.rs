@@ -29,7 +29,7 @@ impl CommandPrompt {
     }
 
     fn back(&mut self) -> Option<Command> {
-        if self.chars.is_empty() {
+        if !self.chars.is_empty() {
             self.chars.pop();
             None
         } else {
