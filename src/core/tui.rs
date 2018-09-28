@@ -17,11 +17,11 @@ use core::{Command, Terminal, TerminalEvent};
 use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
-    pub editor: Editor,
-    pub prompt: Option<CommandPrompt>,
-    pub term: Terminal,
-    pub term_size: (u16, u16),
-    pub shutdown: bool,
+    editor: Editor,
+    prompt: Option<CommandPrompt>,
+    term: Terminal,
+    term_size: (u16, u16),
+    shutdown: bool,
 }
 
 impl Tui {
