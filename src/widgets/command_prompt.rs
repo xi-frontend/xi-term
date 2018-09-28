@@ -65,7 +65,13 @@ impl CommandPrompt {
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Option<Command> {
-        FromStr::from_str(&self.chars).ok()
+        match FromStr::from_str(&self.chars) {
+            Ok(cmd) => Some(cmd),
+            Err(err) => {
+                error!("Failed to parse Command: {:?}", err);
+                None
+            }
+        }
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
