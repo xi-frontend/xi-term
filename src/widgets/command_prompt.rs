@@ -45,9 +45,23 @@ impl CommandPrompt {
         let cmd = match &self.chars[..] {
             "s" | "save" => Some(Command::Save(None)),
             "q" | "quit" => Some(Command::Quit),
-            invalid_command => {
-                error!("Received invalid command: {:?}", invalid_command);
-                Some(Command::Invalid(invalid_command.to_owned()))
+            command => {
+                match &command[0..1] {
+                    "t" => {
+                        if &command[1..2] == " " {
+                            Some(Command::SetTheme(command[2..].to_owned()))
+                        } else if &command[0..6] == "theme " {
+                            Some(Command::SetTheme(command[6..].to_owned()))
+                        } else {
+                            error!("Received invalid theme: {:?}", &command[6..]);
+                            None
+                        }
+                    },
+                    _ => {
+                        error!("Received invalid command: {:?}", command);
+                        Some(Command::Invalid(command.to_owned()))
+                    }
+                }
             }
         };
         self.chars = String::new();

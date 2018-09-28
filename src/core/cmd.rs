@@ -11,5 +11,7 @@ pub enum Command {
     Quit,
     /// Save the current file buffer
     Save(Option<ViewId>),
+    /// Change the syntax theme.
+    SetTheme(String),
     Invalid(String),
 }
