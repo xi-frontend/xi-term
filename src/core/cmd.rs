@@ -27,7 +27,7 @@ pub enum ParseCommandError {
     /// The given command expected an argument.
     ExpectedArgument { cmd: String, expected: usize , found: usize},
     /// The given command was given to many arguments.
-    ToManyArguments{ cmd: String, expected: usize, found: usize},
+    TooManyArguments{ cmd: String, expected: usize, found: usize},
     /// Invalid input was received.
     UnknownCommand(String),
 }
@@ -52,7 +52,7 @@ impl FromStr for Command {
                                 found: 0
                             })
                         } else if parts.len() > 1 {
-                            Err(ParseCommandError::ToManyArguments {
+                            Err(ParseCommandError::TooManyArguments {
                                 cmd: cmd.to_owned(),
                                 expected: 1,
                                 found: parts.len()
