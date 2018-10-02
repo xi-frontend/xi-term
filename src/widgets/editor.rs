@@ -7,7 +7,7 @@ use futures::{Async, Future, Stream};
 use termion::event::Event;
 use tokio::run;
 use xrl::{Client, ClientResult, ScrollTo, Style, Update, ViewId};
-
+use indexmap::IndexMap;
 use failure::Error;
 
 use core::CoreEvent;
@@ -17,7 +17,7 @@ use widgets::{View, ViewClient};
 pub struct Editor {
     pub pending_open_requests: Vec<ClientResult<(ViewId, View)>>,
     pub delayed_events: Vec<CoreEvent>,
-    pub views: HashMap<ViewId, View>,
+    pub views: IndexMap<ViewId, View>,
     pub current_view: ViewId,
     pub events: UnboundedReceiver<CoreEvent>,
     pub client: Client,
@@ -36,7 +36,7 @@ impl Editor {
             delayed_events: Vec::new(),
             pending_open_requests: Vec::new(),
             size: (0, 0),
-            views: HashMap::new(),
+            views: IndexMap::new(),
             styles,
             current_view: ViewId(0),
             client,
@@ -121,6 +121,38 @@ impl Editor {
             None => {
                 if let Some(view) = self.views.get_mut(&self.current_view) {
                     view.save();
+                }
+            }
+        }
+    }
+
+    pub fn next_buffer(&mut self) {
+        if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
+            if dex+1 == self.views.len() {
+                error!("one");
+                if let Some((view, _)) = self.views.get_index(0) {
+                    error!("two");
+                    self.current_view = view.clone();
+                }
+            } else {
+                error!("three");
+                if let Some((view, _)) = self.views.get_index(dex+1) {
+                    error!("four");
+                    self.current_view = view.clone();
+                }
+            }
+        }
+    }
+    
+    pub fn prev_buffer(&mut self) {
+        if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
+            if dex == 0 {
+                if let Some((view, _)) = self.views.get_index(self.views.len()-1) {
+                    self.current_view = view.clone();
+                }
+            } else {
+                if let Some((view, _)) = self.views.get_index(dex-1) {
+                    self.current_view = view.clone();
                 }
             }
         }

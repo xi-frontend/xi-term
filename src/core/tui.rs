@@ -60,7 +60,9 @@ impl Tui {
             Command::Quit => self.exit(),
             Command::Save(view) => self.editor.save(view),
             Command::Open(file) => self.editor.open(file),
-            Command::SetTheme(theme) => self.editor.set_theme(&theme)
+            Command::SetTheme(theme) => self.editor.set_theme(&theme),
+            Command::NextBuffer => self.editor.next_buffer(),
+            Command::PrevBuffer => self.editor.prev_buffer()
         }
     }
 
