@@ -132,28 +132,26 @@ impl Editor {
                 error!("one");
                 if let Some((view, _)) = self.views.get_index(0) {
                     error!("two");
-                    self.current_view = view.clone();
+                    self.current_view = *view;
                 }
             } else {
                 error!("three");
                 if let Some((view, _)) = self.views.get_index(dex+1) {
                     error!("four");
-                    self.current_view = view.clone();
+                    self.current_view = *view;
                 }
             }
         }
     }
-    
+
     pub fn prev_buffer(&mut self) {
         if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
             if dex == 0 {
                 if let Some((view, _)) = self.views.get_index(self.views.len()-1) {
-                    self.current_view = view.clone();
+                    self.current_view = *view;
                 }
-            } else {
-                if let Some((view, _)) = self.views.get_index(dex-1) {
-                    self.current_view = view.clone();
-                }
+            } else if let Some((view, _)) = self.views.get_index(dex-1) {
+                    self.current_view = *view;
             }
         }
     }
