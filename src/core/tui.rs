@@ -17,11 +17,11 @@ use core::{Command, Terminal, TerminalEvent};
 use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
-    pub editor: Editor,
-    pub prompt: Option<CommandPrompt>,
-    pub term: Terminal,
-    pub term_size: (u16, u16),
-    pub shutdown: bool,
+    editor: Editor,
+    prompt: Option<CommandPrompt>,
+    term: Terminal,
+    term_size: (u16, u16),
+    shutdown: bool,
 }
 
 impl Tui {
@@ -31,7 +31,8 @@ impl Tui {
             .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
         run(client
             .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
-            .map_err(|_| ()));
+            .map_err(|_| ())
+        );
 
         Ok(Tui {
             term: Terminal::new()?,
@@ -58,9 +59,8 @@ impl Tui {
             }
             Command::Quit => self.exit(),
             Command::Save(view) => self.editor.save(view),
-            Command::Invalid(cmd) => {
-                error!("Received invalid editor command: {}", cmd);
-            }
+            Command::Open(file) => self.editor.open(file),
+            Command::SetTheme(theme) => self.editor.set_theme(&theme)
         }
     }
 
@@ -70,7 +70,11 @@ impl Tui {
             Event::Key(Key::Ctrl('c')) => self.exit(),
             Event::Key(Key::Alt('x')) => {
                 if let Some(ref mut prompt) = self.prompt {
-                    prompt.handle_input(&event);
+                    match prompt.handle_input(&event) {
+                        Ok(None) => {},
+                        Ok(Some(_)) => unreachable!(),
+                        Err(_) => unreachable!()
+                    }
                 } else {
                     self.prompt = Some(CommandPrompt::default());
                 }
@@ -84,12 +88,12 @@ impl Tui {
 
                 // A command prompt is active.
                 let mut prompt = self.prompt.take().unwrap();
-                if let Some(cmd) = prompt.handle_input(&event) {
-                    // The event resulted in a command to process
-                    self.handle_cmd(cmd);
-                } else {
-                    // Still not command, just update the prompt
-                    self.prompt = Some(prompt);
+                match prompt.handle_input(&event) {
+                    Ok(None) => { self.prompt = Some(prompt); },
+                    Ok(Some(cmd)) => self.handle_cmd(cmd),
+                    Err(err) => {
+                        error!("Failed to parse command: {:?}", err);
+                    }
                 }
             }
         }
