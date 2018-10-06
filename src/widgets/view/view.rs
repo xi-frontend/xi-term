@@ -122,6 +122,7 @@ impl View {
                 Key::Char(c) => self.client.insert(c),
                 Key::Ctrl(c) => match c {
                     'w' => self.client.save(self.file.as_ref().unwrap()),
+                    'h' => self.client.backspace(),
                     _ => error!("un-handled input ctrl+{}", c),
                 },
                 Key::Backspace => self.client.backspace(),
