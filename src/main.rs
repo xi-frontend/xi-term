@@ -16,6 +16,7 @@ extern crate termion;
 extern crate tokio;
 extern crate xdg;
 extern crate xrl;
+extern crate indexmap;
 
 mod core;
 mod widgets;

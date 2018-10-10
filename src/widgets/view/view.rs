@@ -167,6 +167,17 @@ impl View {
         for (lineno, line) in lines.enumerate() {
             self.render_line(w, line, lineno, styles);
         }
+
+        // If the number of lines is less than window height
+        // render empty lines to fill the view window.
+        let line_count = self.cache.lines().len() as u16;
+        let win_size = self.window.size();
+        if win_size > line_count {
+            for num in line_count..win_size {
+                self.render_line(w, &Line::default(), num as usize, styles);
+            }
+        }
+
         Ok(())
     }
 
