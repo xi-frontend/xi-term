@@ -43,8 +43,8 @@ impl FromStr for Command {
         match &s[..] {
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" => Ok(Command::Quit),
-            "nb" | "next-buffer" => Ok(Command::NextBuffer),
-            "pb" | "prev-buffer" =>Ok(Command::PrevBuffer),
+            "bn" | "next-buffer" => Ok(Command::NextBuffer),
+            "bp" | "prev-buffer" =>Ok(Command::PrevBuffer),
             command => {
                 let mut parts: Vec<&str> = command.split(' ').collect();
 
