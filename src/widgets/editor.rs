@@ -132,10 +132,8 @@ impl Editor {
                 if let Some((view, _)) = self.views.get_index(0) {
                     self.current_view = *view;
                 }
-            } else {
-                if let Some((view, _)) = self.views.get_index(dex+1) {
+            } else if let Some((view, _)) = self.views.get_index(dex+1) {
                     self.current_view = *view;
-                }
             }
         }
     }
