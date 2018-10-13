@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/xi-frontend/xi-term.svg?branch=master)](https://travis-ci.org/xi-frontend/xi-term)
 
-Formerly `xi-tui`, `xi-term` is a terminal frontend for [xi](https://github.com/google/xi-editor/).
+Formerly `xi-tui`, `xi-term` is a terminal frontend for [xi](https://github.com/xi-editor/xi-editor/).
 
 It is experimental and under development, so don't expect anything magical (yet!).
 
