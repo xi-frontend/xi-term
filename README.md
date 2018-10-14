@@ -9,7 +9,7 @@ It is experimental and under development, so don't expect anything magical (yet!
 ## Installation
 
 The frontend assumes that you have installed the
-[core editor](https://github.com/google/xi-editor)
+[core editor](https://github.com/xi-editor/xi-editor)
 and is available in your PATH. The following should suffice:
 
 ```bash
