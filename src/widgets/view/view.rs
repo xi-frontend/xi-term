@@ -76,6 +76,10 @@ impl View {
         self.client.backspace()
     }
 
+    pub fn delete(&mut self) {
+        self.client.delete()
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(

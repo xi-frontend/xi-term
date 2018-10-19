@@ -16,6 +16,8 @@ pub enum Command {
     Save(Option<ViewId>),
     /// Backspace
     Back,
+    /// Delete
+    Delete,
     /// Open A new file.
     Open(Option<String>),
     /// Cycle to the next View.
@@ -46,6 +48,7 @@ impl FromStr for Command {
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" => Ok(Command::Quit),
             "b" | "back" => Ok(Command::Back),
+            "d" | "delete" => Ok(Command::Delete),
             "bn" | "next-buffer" => Ok(Command::NextBuffer),
             "bp" | "prev-buffer" =>Ok(Command::PrevBuffer),
             command => {

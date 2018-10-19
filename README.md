@@ -64,6 +64,7 @@ Currently supported commands:
 | s | save | Saves the current file |
 | o `filename` | open `filename` | Open `filename` for editing |
 | b | backspace | Delete the previous character and move the cursor one position back |
+| d | delete | Delete the character under the cursor |
 | bn | next-buffer | Switch to the next buffer |
 | bp | prev-buffer | Switch to the previous buffer |
 | t `theme` | theme `theme-name` | Set the theme to `theme`|
@@ -73,7 +74,6 @@ Future commands:
 | Short form | Long form | Description |
 | ---------- | --------- | ----------- |
 | c | close | Closes the current view |
-| d | delete | Delete the character under the cursor |
 | ? `string` | search `string` | Search for `string` |
 | pd | page-down | Advance the current view by one page |
 | pu | page-up | Move the current view back by one page |
