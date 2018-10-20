@@ -126,6 +126,18 @@ impl Editor {
         }
     }
 
+    pub fn back(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.back();
+        }
+    }
+
+    pub fn delete(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.delete();
+        }
+    }
+
     pub fn next_buffer(&mut self) {
         if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
             if dex+1 == self.views.len() {

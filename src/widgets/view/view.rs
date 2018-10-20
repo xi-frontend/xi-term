@@ -72,6 +72,14 @@ impl View {
         self.client.save(self.file.as_ref().unwrap())
     }
 
+    pub fn back(&mut self) {
+        self.client.backspace()
+    }
+
+    pub fn delete(&mut self) {
+        self.client.delete()
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(
