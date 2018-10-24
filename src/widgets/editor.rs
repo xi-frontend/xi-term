@@ -161,6 +161,18 @@ impl Editor {
             }
         }
     }
+
+    pub fn page_down(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.page_down();
+        }
+    }
+
+    pub fn page_up(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.page_up();
+        }
+    }
 }
 
 /// Methods ment to be called by the tui struct

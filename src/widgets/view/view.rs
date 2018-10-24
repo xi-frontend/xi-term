@@ -80,6 +80,14 @@ impl View {
         self.client.delete()
     }
 
+    pub fn page_down(&mut self) {
+        self.client.page_down()
+    }
+
+    pub fn page_up(&mut self) {
+        self.client.page_up()
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(
