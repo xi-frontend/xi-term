@@ -23,7 +23,7 @@ impl CommandPrompt {
     pub fn handle_input(&mut self, input: &Event) -> Result<Option<Command>, ParseCommandError> {
         match input {
             Event::Key(Key::Char('\n')) => self.finalize(),
-            Event::Key(Key::Backspace) => Ok(self.back()),
+            Event::Key(Key::Backspace) | Event::Key(Key::Ctrl('h')) => Ok(self.back()),
             Event::Key(Key::Delete) => Ok(self.delete()),
             Event::Key(Key::Left) => Ok(self.left()),
             Event::Key(Key::Right) => Ok(self.right()),
