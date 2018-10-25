@@ -24,6 +24,10 @@ pub enum Command {
     NextBuffer,
     /// Cycle to the previous buffer.
     PrevBuffer,
+    /// Page down
+    PageDown,
+    /// Page up
+    PageUp,
     /// Change the syntax theme.
     SetTheme(String),
 }
@@ -51,6 +55,8 @@ impl FromStr for Command {
             "d" | "delete" => Ok(Command::Delete),
             "bn" | "next-buffer" => Ok(Command::NextBuffer),
             "bp" | "prev-buffer" =>Ok(Command::PrevBuffer),
+            "pd" | "page-down" => Ok(Command::PageDown),
+            "pu" | "page-up" => Ok(Command::PageUp),
             command => {
                 let mut parts: Vec<&str> = command.split(' ').collect();
 

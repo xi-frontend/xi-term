@@ -67,6 +67,8 @@ Currently supported commands:
 | d | delete | Delete the character under the cursor |
 | bn | next-buffer | Switch to the next buffer |
 | bp | prev-buffer | Switch to the previous buffer |
+| pd | page-down | Advance the current view by one page |
+| pu | page-up | Move the current view back by one page |
 | t `theme` | theme `theme-name` | Set the theme to `theme`|
 
 Future commands:
@@ -75,8 +77,6 @@ Future commands:
 | ---------- | --------- | ----------- |
 | c | close | Closes the current view |
 | ? `string` | search `string` | Search for `string` |
-| pd | page-down | Advance the current view by one page |
-| pu | page-up | Move the current view back by one page |
 | ml | move-left | Move the cursor one position left |
 | mr | move-right | Move the cursor one position right |
 | mu | move-up | Move the cursor one line up |

@@ -64,7 +64,9 @@ impl Tui {
             Command::Open(file) => self.editor.open(file),
             Command::SetTheme(theme) => self.editor.set_theme(&theme),
             Command::NextBuffer => self.editor.next_buffer(),
-            Command::PrevBuffer => self.editor.prev_buffer()
+            Command::PrevBuffer => self.editor.prev_buffer(),
+            Command::PageDown => self.editor.page_down(),
+            Command::PageUp => self.editor.page_up(),
         }
     }
 
