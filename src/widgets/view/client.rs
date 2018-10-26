@@ -20,6 +20,16 @@ impl Client {
         spawn(f);
     }
 
+    pub fn insert_newline(&mut self) {
+        let f = self.inner.insert_newline(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn insert_tab(&mut self) {
+        let f = self.inner.insert_tab(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
+
     pub fn scroll(&mut self, start: u64, end: u64) {
         let f = self.inner.scroll(self.view_id, start, end).map_err(|_| ());
         spawn(f);

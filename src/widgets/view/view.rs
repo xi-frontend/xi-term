@@ -68,6 +68,18 @@ impl View {
         );
     }
 
+    pub fn insert(&mut self, c: char) {
+        self.client.insert(c)
+    }
+
+    pub fn insert_newline(&mut self) {
+        self.client.insert_newline()
+    }
+
+    pub fn insert_tab(&mut self) {
+        self.client.insert_tab()
+    }
+
     pub fn save(&mut self) {
         self.client.save(self.file.as_ref().unwrap())
     }
@@ -135,7 +147,11 @@ impl View {
     pub fn handle_input(&mut self, event: Event) {
         match event {
             Event::Key(key) => match key {
-                Key::Char(c) => self.client.insert(c),
+                Key::Char(c) => match c {
+                    '\n' => self.insert_newline(),
+                    '\t' => self.insert_tab(),
+                    _ => self.insert(c),
+                }
                 Key::Ctrl(c) => match c {
                     'w' => self.save(),
                     'h' => self.back(),
