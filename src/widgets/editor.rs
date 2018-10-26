@@ -6,7 +6,7 @@ use futures::{Async, Future, Stream};
 
 use termion::event::Event;
 use tokio::run;
-use xrl::{Client, ClientResult, ScrollTo, Style, Update, ViewId};
+use xrl::{Client, ClientResult, ScrollTo, ConfigChanged, Style, Update, ViewId};
 use indexmap::IndexMap;
 use failure::Error;
 
@@ -70,6 +70,7 @@ impl Editor {
             CoreEvent::Update(update) => self.handle_update(update),
             CoreEvent::SetStyle(style) => self.handle_def_style(style),
             CoreEvent::ScrollTo(scroll_to) => self.handle_scroll_to(scroll_to),
+            CoreEvent::ConfigChanged(config) => self.handle_config_changed(config),
         }
     }
 
@@ -89,6 +90,13 @@ impl Editor {
 
     fn handle_def_style(&mut self, style: Style) {
         self.styles.insert(style.id, style);
+    }
+
+    fn handle_config_changed(&mut self, config: ConfigChanged) {
+        match self.views.get_mut(&config.view_id) {
+            Some(view) => view.config_changed(config.changes),
+            None => self.delayed_events.push(CoreEvent::ConfigChanged(config)),
+        }
     }
 }
 

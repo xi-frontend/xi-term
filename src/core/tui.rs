@@ -152,6 +152,7 @@ pub enum CoreEvent {
     Update(Update),
     ScrollTo(ScrollTo),
     SetStyle(Style),
+    ConfigChanged(ConfigChanged)
 }
 
 impl Future for Tui {
@@ -222,8 +223,8 @@ impl Frontend for TuiService {
     fn plugin_stoped(&mut self, _plugin: PluginStoped) -> ServerResult<()> {
         Box::new(future::ok(()))
     }
-    fn config_changed(&mut self, _config: ConfigChanged) -> ServerResult<()> {
-        Box::new(future::ok(()))
+    fn config_changed(&mut self, config: ConfigChanged) -> ServerResult<()> {
+        self.send_core_event(CoreEvent::ConfigChanged(config))
     }
     fn theme_changed(&mut self, _theme: ThemeChanged) -> ServerResult<()> {
         Box::new(future::ok(()))

@@ -5,13 +5,11 @@ use failure::Error;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
-use xrl::{Line, LineCache, Style, Update};
+use xrl::{Line, LineCache, Style, Update, ConfigChanges};
 
 use super::client::Client;
 use super::style::{reset_style, set_style};
 use super::window::Window;
-
-const TAB_LENGTH: u16 = 4;
 
 #[derive(Debug, Default)]
 pub struct Cursor {
@@ -25,6 +23,7 @@ pub struct View {
     window: Window,
     file: Option<String>,
     client: Client,
+    tab_size: u16,
 }
 
 impl View {
@@ -35,6 +34,7 @@ impl View {
             cursor: Default::default(),
             window: Window::new(),
             file,
+            tab_size: 4
         }
     }
 
@@ -46,6 +46,12 @@ impl View {
     pub fn set_cursor(&mut self, line: u64, column: u64) {
         self.cursor = Cursor { line, column };
         self.window.set_cursor(&self.cursor);
+    }
+
+    pub fn config_changed(&mut self, changes: ConfigChanges) {
+        if let Some(tab_size) = changes.tab_size {
+            self.tab_size = tab_size as u16;
+        }
     }
 
     pub fn render<W: Write>(
@@ -122,7 +128,7 @@ impl View {
             }
             let mut text_len: u16 = 0;
             for (idx, c) in line.text.chars().enumerate() {
-                text_len = add_char_width(text_len, c);
+                text_len += self.translate_char_width(c);
                 if u64::from(text_len) >= y {
                     return (lineno as u64, idx as u64 + 1);
                 }
@@ -339,25 +345,26 @@ impl View {
         // the string, but characters may have various lengths. For the moment, we only handle
         // tabs, and we assume the terminal has tabstops of TAB_LENGTH. We consider that all the
         // other characters have a width of 1.
-        let column = line
+        let column: u16 = line
             .text
             .chars()
             .take(self.cursor.column as usize)
-            .fold(0, add_char_width);
+            .fold(0, |acc, c| { acc + self.translate_char_width(c) });
 
         // Draw the cursor
-        let cursor_pos = Goto(column as u16 + 1, line_pos as u16 + 1);
+        let cursor_pos = Goto(column + 1, line_pos as u16 + 1);
         if let Err(e) = write!(w, "{}", cursor_pos) {
             error!("failed to render cursor: {}", e);
         }
         info!("Cursor rendered at ({}, {})", line_pos, column);
     }
-}
 
-fn add_char_width(acc: u16, c: char) -> u16 {
-    if c == '\t' {
-        acc + TAB_LENGTH - (acc % TAB_LENGTH)
-    } else {
-        acc + 1
+    fn translate_char_width(&self, c: char) -> u16 {
+        if c == '\t' {
+            self.tab_size
+        }
+        else {
+            1
+        }
     }
 }
