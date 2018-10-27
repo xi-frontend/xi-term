@@ -86,16 +86,36 @@ Future commands:
 | su | select-up | Move the cursor one line up and update the current selection accordingly |
 | sd | select-down | Move the cursor one line down and update the current selection accordingly |
 
+## Preferences
+Xi-core supports several user-configurable options through a `preferences.xiconfig` file.
+The default location for this is `$XDG_CONFIG_HOME/xi/preferences.xiconfig`, or, if
+`$XDG_CONFIG_HOME` is not set, it defaults to `$HOME/xi/preferences.xiconfig`.
+
 ## Caveats
 
 ### Tabs
 
-We assume tabs (`\t`) are 4 columns large. If that is not the case in your
-terminal, the cursor position will be inaccurate. On linux, to set the `\t`
-width to four spaces, do:
+We assume at least one of the following is true:
+
+1. the `translate_tabs_to_spaces` config option is enabled, or
+2. the `tab_size` config option matches your terminal tabstop settings.
+
+The xi-core options may be specified in your preferences.xiconfig file. For
+most filetypes, `translate_tabs_to_spaces` defaults to 'on' (although it is
+disabled for Makefiles).  The default `tab_size` is 4.
+
+Note that many terminals default to a tab size of 8. You can change your tab
+size to 4 with the command:
 
 ```
 tabs -4
+```
+
+or update your user config `tab_size` to 8:
+
+`preferences.xiconfig`:
+```
+tab_size = 8
 ```
 
 ### Colors
