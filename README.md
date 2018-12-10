@@ -93,31 +93,6 @@ The default location for this is `$XDG_CONFIG_HOME/xi/preferences.xiconfig`, or,
 
 ## Caveats
 
-### Tabs
-
-We assume at least one of the following is true:
-
-1. the `translate_tabs_to_spaces` config option is enabled, or
-2. the `tab_size` config option matches your terminal tabstop settings.
-
-The xi-core options may be specified in your preferences.xiconfig file. For
-most filetypes, `translate_tabs_to_spaces` defaults to 'on' (although it is
-disabled for Makefiles).  The default `tab_size` is 4.
-
-Note that many terminals default to a tab size of 8. You can change your tab
-size to 4 with the command:
-
-```
-tabs -4
-```
-
-or update your user config `tab_size` to 8:
-
-`preferences.xiconfig`:
-```
-tab_size = 8
-```
-
 ### Colors
 
 If you have the `syntect` plugin installed, colors will be enabled by default, with two caveats:

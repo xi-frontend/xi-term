@@ -128,9 +128,17 @@ impl View {
             }
             let mut text_len: u16 = 0;
             for (idx, c) in line.text.chars().enumerate() {
-                text_len += self.translate_char_width(c);
+                let char_width = self.translate_char_width(text_len, c);
+                text_len += char_width;
                 if u64::from(text_len) >= y {
-                    return (lineno as u64, idx as u64 + 1);
+                    // If the character at idx is wider than one column,
+                    // the click occurred within the character. Otherwise,
+                    // the click occurred on the character at idx + 1
+                    if char_width > 1 {
+                        return (lineno as u64, idx as u64);
+                    } else {
+                        return (lineno as u64, idx as u64 + 1);
+                    }
                 }
             }
             return (lineno, line.text.len() as u64 + 1);
@@ -219,6 +227,11 @@ impl View {
         Ok(())
     }
 
+    // Next tab stop, assuming 0-based indexing
+    fn tab_width_at_position(&self, position: u16) -> u16 {
+        self.tab_size - (position % self.tab_size)
+    }
+
     fn render_line<W: Write>(
         &self,
         w: &mut W,
@@ -226,14 +239,34 @@ impl View {
         lineno: usize,
         styles: &HashMap<u64, Style>,
     ) {
-        let text = self.add_styles(styles, line);
+        let text = self.escape_control_and_add_styles(styles, line);
         if let Err(e) = write!(w, "{}{}{}", Goto(1, lineno as u16 + 1), ClearLine, &text) {
             error!("failed to render line: {}", e);
         }
     }
 
-    fn add_styles(&self, styles: &HashMap<u64, Style>, line: &Line) -> String {
-        let mut text = line.text.clone();
+    fn escape_control_and_add_styles(&self, styles: &HashMap<u64, Style>, line: &Line) -> String {
+        let mut position: u16 = 0;
+        let mut text = String::with_capacity(line.text.capacity());
+        for c in line.text.chars() {
+            match c {
+                '\x00'...'\x08' | '\x0a'...'\x1f' | '\x7f' => {
+                    // Render in caret notation, i.e. '\x02' is rendered as '^B'
+                    text.push('^');
+                    text.push((c as u8 ^ 0x40u8) as char);
+                    position += 2;
+                },
+                '\t' => {
+                    let tab_width = self.tab_width_at_position(position);
+                    text.push_str(&" ".repeat(tab_width as usize));
+                    position += tab_width;
+                },
+                _ => {
+                    text.push(c);
+                    position += 1;
+                },
+            }
+        }
         if line.styles.is_empty() {
             return text;
         }
@@ -343,13 +376,15 @@ impl View {
 
         // Calculate the cursor position on the line. The trick is that we know the position within
         // the string, but characters may have various lengths. For the moment, we only handle
-        // tabs, and we assume the terminal has tabstops of TAB_LENGTH. We consider that all the
-        // other characters have a width of 1.
+        // control characters and tabs. We assume control characters (0x00-0x1f, excluding 0x09 ==
+        // tab) are rendered in caret notation and are thus two columns wide. Tabs are
+        // variable-width, rounding up to the next tab stop. All other characters are assumed to be
+        // one column wide.
         let column: u16 = line
             .text
             .chars()
             .take(self.cursor.column as usize)
-            .fold(0, |acc, c| { acc + self.translate_char_width(c) });
+            .fold(0, |acc, c| { acc + self.translate_char_width(acc, c) });
 
         // Draw the cursor
         let cursor_pos = Goto(column + 1, line_pos as u16 + 1);
@@ -359,12 +394,12 @@ impl View {
         info!("Cursor rendered at ({}, {})", line_pos, column);
     }
 
-    fn translate_char_width(&self, c: char) -> u16 {
-        if c == '\t' {
-            self.tab_size
-        }
-        else {
-            1
+    fn translate_char_width(&self, position: u16, c: char) -> u16 {
+        match c {
+            // Caret notation means non-tab control characters are two columns wide
+            '\x00'...'\x08' | '\x0a'...'\x1f' | '\x7f' => 2,
+            '\t' => self.tab_width_at_position(position),
+            _ => 1
         }
     }
 }
