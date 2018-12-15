@@ -15,7 +15,7 @@ and is available in your PATH. The following should suffice:
 ```bash
 git clone https://github.com/xi-editor/xi-editor
 cd xi-editor/rust
-cargo install
+cargo install --path .
 
 # if you want syntax highlighting, you need to install the syntect plugin:
 cd syntect-plugin
