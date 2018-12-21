@@ -210,8 +210,9 @@ impl View {
             .take(self.window.size() as usize);
 
         // Draw the valid lines within this range
+        let mut line_strings = String::new();
         for (lineno, line) in lines.enumerate() {
-            self.render_line(w, line, lineno, styles);
+            line_strings.push_str(&self.render_line_str(line, lineno, styles));
         }
 
         // If the number of lines is less than window height
@@ -220,9 +221,14 @@ impl View {
         let win_size = self.window.size();
         if win_size > line_count {
             for num in line_count..win_size {
-                self.render_line(w, &Line::default(), num as usize, styles);
+                line_strings.push_str(&self.render_line_str(
+                    &Line::default(),
+                    num as usize,
+                    styles,
+                ));
             }
         }
+        w.write(line_strings.as_bytes())?;
 
         Ok(())
     }
@@ -232,17 +238,9 @@ impl View {
         self.tab_size - (position % self.tab_size)
     }
 
-    fn render_line<W: Write>(
-        &self,
-        w: &mut W,
-        line: &Line,
-        lineno: usize,
-        styles: &HashMap<u64, Style>,
-    ) {
+    fn render_line_str(&self, line: &Line, lineno: usize, styles: &HashMap<u64, Style>) -> String {
         let text = self.escape_control_and_add_styles(styles, line);
-        if let Err(e) = write!(w, "{}{}{}", Goto(1, lineno as u16 + 1), ClearLine, &text) {
-            error!("failed to render line: {}", e);
-        }
+        format!("{}{}{}", Goto(1, lineno as u16 + 1), ClearLine, &text)
     }
 
     fn escape_control_and_add_styles(&self, styles: &HashMap<u64, Style>, line: &Line) -> String {
