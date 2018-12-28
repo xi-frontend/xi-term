@@ -24,17 +24,19 @@ pub struct View {
     file: Option<String>,
     client: Client,
     tab_size: u16,
+    gutter_size: u16
 }
 
 impl View {
     pub fn new(client: Client, file: Option<String>) -> View {
         View {
-            client,
             cache: LineCache::default(),
             cursor: Default::default(),
             window: Window::new(),
+            tab_size: 4,
+            gutter_size: 0,
+            client,
             file,
-            tab_size: 4
         }
     }
 
@@ -45,7 +47,8 @@ impl View {
 
     pub fn set_cursor(&mut self, line: u64, column: u64) {
         self.cursor = Cursor { line, column };
-        self.window.set_cursor(&self.cursor);
+        self.window.set_cursor(&
+            self.cursor);
     }
 
     pub fn config_changed(&mut self, changes: ConfigChanges) {
@@ -68,10 +71,9 @@ impl View {
     pub fn resize(&mut self, height: u16) {
         self.window.resize(height);
         self.update_window();
-        self.client.scroll(
-            self.cache.before() + self.window.start(),
-            self.cache.after() + self.window.end(),
-        );
+        let top = self.cache.before() + self.window.start();
+        let bottom = self.cache.after() + self.window.end();
+        self.client.scroll(top, bottom);
     }
 
     pub fn insert(&mut self, c: char) {
@@ -117,6 +119,11 @@ impl View {
         }
         let cursor_line = self.cursor.line - self.cache.before();
         let nb_lines = self.cache.lines().len() as u64;
+
+        self.gutter_size = 1;
+        for _ in (self.cache.before()+nb_lines+self.cache.after()).to_string().chars() {
+            self.gutter_size += 1;
+        }
         self.window.update(cursor_line, nb_lines);
     }
 
@@ -209,10 +216,14 @@ impl View {
             .skip(self.window.start() as usize)
             .take(self.window.size() as usize);
 
+
+
         // Draw the valid lines within this range
         let mut line_strings = String::new();
+        let mut line_no = self.cache.before()+self.window.start();
         for (lineno, line) in lines.enumerate() {
-            line_strings.push_str(&self.render_line_str(line, lineno, styles));
+            line_strings.push_str(&self.render_line_str(line, Some(line_no), lineno, styles));
+            line_no += 1;
         }
 
         // If the number of lines is less than window height
@@ -223,6 +234,7 @@ impl View {
             for num in line_count..win_size {
                 line_strings.push_str(&self.render_line_str(
                     &Line::default(),
+                    None,
                     num as usize,
                     styles,
                 ));
@@ -238,9 +250,19 @@ impl View {
         self.tab_size - (position % self.tab_size)
     }
 
-    fn render_line_str(&self, line: &Line, lineno: usize, styles: &HashMap<u64, Style>) -> String {
+    fn render_line_str(&self, line: &Line, line_no: Option<u64>, lineno: usize, styles: &HashMap<u64, Style>) -> String {
         let text = self.escape_control_and_add_styles(styles, line);
-        format!("{}{}{}", Goto(1, lineno as u16 + 1), ClearLine, &text)
+        if let Some(line_no) = line_no {
+            format!("{}{}{}{}{}",
+                Goto(1, lineno as u16+1),
+                ClearLine,
+                (line_no+1).to_string(),
+                Goto(self.gutter_size+1, lineno as u16 + 1),
+                &text
+            )
+        } else {
+            format!("{}{}{}", Goto(self.gutter_size+1, lineno as u16 + 1), ClearLine, &text)
+        }
     }
 
     fn escape_control_and_add_styles(&self, styles: &HashMap<u64, Style>, line: &Line) -> String {
@@ -385,7 +407,7 @@ impl View {
             .fold(0, |acc, c| { acc + self.translate_char_width(acc, c) });
 
         // Draw the cursor
-        let cursor_pos = Goto(column + 1, line_pos as u16 + 1);
+        let cursor_pos = Goto(self.gutter_size + column + 1, line_pos as u16 + 1);
         if let Err(e) = write!(w, "{}", cursor_pos) {
             error!("failed to render cursor: {}", e);
         }
