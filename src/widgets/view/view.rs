@@ -130,7 +130,7 @@ impl View {
     fn get_click_location(&self, x: u64, y: u64) -> (u64, u64) {
         let lineno = x + self.cache.before() + self.window.start();
         if let Some(line) = self.cache.lines().get(x as usize) {
-            if y == 0 {
+            if y < self.gutter_size as u64+1 {
                 return (lineno, 0);
             }
             let mut text_len: u16 = 0;
@@ -142,9 +142,9 @@ impl View {
                     // the click occurred within the character. Otherwise,
                     // the click occurred on the character at idx + 1
                     if char_width > 1 {
-                        return (lineno as u64, idx as u64);
+                        return (lineno as u64, (idx-self.gutter_size as usize) as u64);
                     } else {
-                        return (lineno as u64, idx as u64 + 1);
+                        return (lineno as u64, (idx-self.gutter_size as usize) as u64 + 1);
                     }
                 }
             }
