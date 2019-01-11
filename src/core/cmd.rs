@@ -24,6 +24,14 @@ pub enum Command {
     NextBuffer,
     /// Cycle to the previous buffer.
     PrevBuffer,
+    /// Move cursor left.
+    MoveLeft,
+    /// Move cursor right.
+    MoveRight,
+    /// Move cursor up.
+    MoveUp,
+    /// Move cursor down.
+    MoveDown,
     /// Page down
     PageDown,
     /// Page up
@@ -57,6 +65,10 @@ impl FromStr for Command {
             "bp" | "prev-buffer" =>Ok(Command::PrevBuffer),
             "pd" | "page-down" => Ok(Command::PageDown),
             "pu" | "page-up" => Ok(Command::PageUp),
+            "ml" | "move-left" => Ok(Command::MoveLeft),
+            "mr" | "move-right" => Ok(Command::MoveRight),
+            "mu" | "move-up" => Ok(Command::MoveUp),
+            "md" | "move-down" => Ok(Command::MoveDown),
             command => {
                 let mut parts: Vec<&str> = command.split(' ').collect();
 

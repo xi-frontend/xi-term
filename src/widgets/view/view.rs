@@ -106,6 +106,22 @@ impl View {
         self.client.page_up()
     }
 
+    pub fn move_left(&mut self) {
+        self.client.left()
+    }
+
+    pub fn move_right(&mut self) {
+        self.client.right()
+    }
+
+    pub fn move_up(&mut self) {
+        self.client.up()
+    }
+
+    pub fn move_down(&mut self) {
+        self.client.down()
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(

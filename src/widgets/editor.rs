@@ -170,6 +170,30 @@ impl Editor {
         }
     }
 
+    pub fn move_left(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.move_left();
+        }
+    }
+
+    pub fn move_right(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.move_right();
+        }
+    }
+
+    pub fn move_up(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.move_up();
+        }
+    }
+
+    pub fn move_down(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.move_down();
+        }
+    }
+
     pub fn page_down(&mut self) {
         if let Some(view) = self.views.get_mut(&self.current_view) {
             view.page_down();
