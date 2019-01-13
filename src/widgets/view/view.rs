@@ -47,8 +47,7 @@ impl View {
 
     pub fn set_cursor(&mut self, line: u64, column: u64) {
         self.cursor = Cursor { line, column };
-        self.window.set_cursor(&
-            self.cursor);
+        self.window.set_cursor(&self.cursor);
     }
 
     pub fn config_changed(&mut self, changes: ConfigChanges) {
@@ -119,11 +118,7 @@ impl View {
         }
         let cursor_line = self.cursor.line - self.cache.before();
         let nb_lines = self.cache.lines().len() as u64;
-
-        self.gutter_size = 1;
-        for _ in (self.cache.before()+nb_lines+self.cache.after()).to_string().chars() {
-            self.gutter_size += 1;
-        }
+        self.gutter_size = (self.cache.before() + nb_lines + self.cache.after()).to_string().len() as u16;
         self.window.update(cursor_line, nb_lines);
     }
 
@@ -221,8 +216,8 @@ impl View {
         // Draw the valid lines within this range
         let mut line_strings = String::new();
         let mut line_no = self.cache.before()+self.window.start();
-        for (lineno, line) in lines.enumerate() {
-            line_strings.push_str(&self.render_line_str(line, Some(line_no), lineno, styles));
+        for (line_index, line) in lines.enumerate() {
+            line_strings.push_str(&self.render_line_str(line, Some(line_no), line_index, styles));
             line_no += 1;
         }
 
@@ -250,18 +245,18 @@ impl View {
         self.tab_size - (position % self.tab_size)
     }
 
-    fn render_line_str(&self, line: &Line, line_no: Option<u64>, lineno: usize, styles: &HashMap<u64, Style>) -> String {
+    fn render_line_str(&self, line: &Line, lineno: Option<u64>, line_index: usize, styles: &HashMap<u64, Style>) -> String {
         let text = self.escape_control_and_add_styles(styles, line);
-        if let Some(line_no) = line_no {
+        if let Some(line_no) = lineno {
             format!("{}{}{}{}{}",
-                Goto(1, lineno as u16+1),
+                Goto(1, line_index as u16+1),
                 ClearLine,
                 (line_no+1).to_string(),
-                Goto(self.gutter_size+1, lineno as u16 + 1),
+                Goto(self.gutter_size+1, line_index as u16 + 1),
                 &text
             )
         } else {
-            format!("{}{}{}", Goto(self.gutter_size+1, lineno as u16 + 1), ClearLine, &text)
+            format!("{}{}{}", Goto(self.gutter_size+1, line_index as u16 + 1), ClearLine, &text)
         }
     }
 
