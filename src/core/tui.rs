@@ -65,6 +65,10 @@ impl Tui {
             Command::SetTheme(theme) => self.editor.set_theme(&theme),
             Command::NextBuffer => self.editor.next_buffer(),
             Command::PrevBuffer => self.editor.prev_buffer(),
+            Command::MoveLeft => self.editor.move_left(),
+            Command::MoveRight => self.editor.move_right(),
+            Command::MoveUp => self.editor.move_up(),
+            Command::MoveDown => self.editor.move_down(),
             Command::PageDown => self.editor.page_down(),
             Command::PageUp => self.editor.page_up(),
         }

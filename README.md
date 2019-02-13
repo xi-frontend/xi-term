@@ -69,6 +69,10 @@ Currently supported commands:
 | bp | prev-buffer | Switch to the previous buffer |
 | pd | page-down | Advance the current view by one page |
 | pu | page-up | Move the current view back by one page |
+| ml | move-left | Move the cursor one position left |
+| mr | move-right | Move the cursor one position right |
+| mu | move-up | Move the cursor one line up |
+| md | move-down | Move the cursor one line down |
 | t `theme` | theme `theme-name` | Set the theme to `theme`|
 
 Future commands:
@@ -77,10 +81,6 @@ Future commands:
 | ---------- | --------- | ----------- |
 | c | close | Closes the current view |
 | ? `string` | search `string` | Search for `string` |
-| ml | move-left | Move the cursor one position left |
-| mr | move-right | Move the cursor one position right |
-| mu | move-up | Move the cursor one line up |
-| md | move-down | Move the cursor one line down |
 | sl | select-left | Move the cursor one position left and update the current selection accordingly |
 | sr | select-right | Move the cursor one position right and update the current selection accordingly |
 | su | select-up | Move the cursor one line up and update the current selection accordingly |
