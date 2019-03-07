@@ -122,6 +122,10 @@ impl View {
         self.client.down()
     }
 
+    pub fn toggle_line_numbers(&mut self) {
+        self.cfg.display_gutter = !self.cfg.display_gutter;
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(
@@ -263,13 +267,17 @@ impl View {
     fn render_line_str(&self, line: &Line, lineno: Option<u64>, line_index: usize, styles: &HashMap<u64, Style>) -> String {
         let text = self.escape_control_and_add_styles(styles, line);
         if let Some(line_no) = lineno {
-            format!("{}{}{}{}{}",
-                Goto(1, line_index as u16+1),
-                ClearLine,
-                (line_no+1).to_string(),
-                Goto(self.cfg.gutter_size+1, line_index as u16 + 1),
-                &text
-            )
+            if self.cfg.display_gutter {
+                format!("{}{}{}{}{}",
+                    Goto(1, line_index as u16+1),
+                    ClearLine,
+                    (line_no+1).to_string(),
+                    Goto(self.cfg.gutter_size+1, line_index as u16 + 1),
+                    &text
+                )
+            } else {
+                format!("{}{}{}", Goto(0, line_index as u16 + 1), ClearLine, &text)
+            }
         } else {
             format!("{}{}{}", Goto(self.cfg.gutter_size+1, line_index as u16 + 1), ClearLine, &text)
         }
