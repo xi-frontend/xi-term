@@ -144,7 +144,7 @@ impl View {
     fn get_click_location(&self, x: u64, y: u64) -> (u64, u64) {
         let lineno = x + self.cache.before() + self.window.start();
         if let Some(line) = self.cache.lines().get(x as usize) {
-            if y < self.cfg.gutter_size as u64+1 {
+            if y < u64::from(self.cfg.gutter_size) {
                 return (lineno, 0);
             }
             let mut text_len: u16 = 0;
@@ -254,7 +254,7 @@ impl View {
                 ));
             }
         }
-        w.write(line_strings.as_bytes())?;
+        w.write_all(line_strings.as_bytes())?;
 
         Ok(())
     }

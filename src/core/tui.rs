@@ -172,7 +172,7 @@ impl Future for Tui {
 
         if let Err(e) = self.render() {
             error!("error: {}", e);
-            error!("caused by: {}", e.cause());
+            error!("caused by: {}", e.as_fail());
         }
 
         if self.shutdown {
