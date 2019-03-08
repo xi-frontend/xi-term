@@ -1,6 +1,6 @@
 mod client;
 mod style;
-#[cfg_attr(feature = "clippy", allow(clippy::module_inception))]
+#[allow(clippy::module_inception)]
 mod view;
 mod window;
 mod cfg;
