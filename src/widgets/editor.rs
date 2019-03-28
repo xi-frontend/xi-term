@@ -205,6 +205,12 @@ impl Editor {
             view.page_up();
         }
     }
+
+    pub fn toggle_line_numbers(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.toggle_line_numbers();
+        }
+    }
 }
 
 /// Methods ment to be called by the tui struct
