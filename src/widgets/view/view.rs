@@ -10,6 +10,7 @@ use xrl::{Line, LineCache, Style, Update, ConfigChanges};
 use super::client::Client;
 use super::style::{reset_style, set_style};
 use super::window::Window;
+use super::cfg::ViewConfig;
 
 #[derive(Debug, Default)]
 pub struct Cursor {
@@ -23,8 +24,7 @@ pub struct View {
     window: Window,
     file: Option<String>,
     client: Client,
-    tab_size: u16,
-    gutter_size: u16
+    cfg: ViewConfig
 }
 
 impl View {
@@ -33,8 +33,7 @@ impl View {
             cache: LineCache::default(),
             cursor: Default::default(),
             window: Window::new(),
-            tab_size: 4,
-            gutter_size: 0,
+            cfg: ViewConfig::default(),
             client,
             file,
         }
@@ -52,7 +51,7 @@ impl View {
 
     pub fn config_changed(&mut self, changes: ConfigChanges) {
         if let Some(tab_size) = changes.tab_size {
-            self.tab_size = tab_size as u16;
+            self.cfg.tab_size = tab_size as u16;
         }
     }
 
@@ -123,6 +122,10 @@ impl View {
         self.client.down()
     }
 
+    pub fn toggle_line_numbers(&mut self) {
+        self.cfg.display_gutter = !self.cfg.display_gutter;
+    }
+
     fn update_window(&mut self) {
         if self.cursor.line < self.cache.before() {
             error!(
@@ -134,14 +137,14 @@ impl View {
         }
         let cursor_line = self.cursor.line - self.cache.before();
         let nb_lines = self.cache.lines().len() as u64;
-        self.gutter_size = (self.cache.before() + nb_lines + self.cache.after()).to_string().len() as u16;
+        self.cfg.gutter_size = (self.cache.before() + nb_lines + self.cache.after()).to_string().len() as u16;
         self.window.update(cursor_line, nb_lines);
     }
 
     fn get_click_location(&self, x: u64, y: u64) -> (u64, u64) {
         let lineno = x + self.cache.before() + self.window.start();
         if let Some(line) = self.cache.lines().get(x as usize) {
-            if y < self.gutter_size as u64+1 {
+            if y < u64::from(self.cfg.gutter_size) {
                 return (lineno, 0);
             }
             let mut text_len: u16 = 0;
@@ -153,9 +156,9 @@ impl View {
                     // the click occurred within the character. Otherwise,
                     // the click occurred on the character at idx + 1
                     if char_width > 1 {
-                        return (lineno as u64, (idx-self.gutter_size as usize) as u64);
+                        return (lineno as u64, (idx-self.cfg.gutter_size as usize) as u64);
                     } else {
-                        return (lineno as u64, (idx-self.gutter_size as usize) as u64 + 1);
+                        return (lineno as u64, (idx-self.cfg.gutter_size as usize) as u64 + 1);
                     }
                 }
             }
@@ -251,28 +254,32 @@ impl View {
                 ));
             }
         }
-        w.write(line_strings.as_bytes())?;
+        w.write_all(line_strings.as_bytes())?;
 
         Ok(())
     }
 
     // Next tab stop, assuming 0-based indexing
     fn tab_width_at_position(&self, position: u16) -> u16 {
-        self.tab_size - (position % self.tab_size)
+        self.cfg.tab_size - (position % self.cfg.tab_size)
     }
 
     fn render_line_str(&self, line: &Line, lineno: Option<u64>, line_index: usize, styles: &HashMap<u64, Style>) -> String {
         let text = self.escape_control_and_add_styles(styles, line);
         if let Some(line_no) = lineno {
-            format!("{}{}{}{}{}",
-                Goto(1, line_index as u16+1),
-                ClearLine,
-                (line_no+1).to_string(),
-                Goto(self.gutter_size+1, line_index as u16 + 1),
-                &text
-            )
+            if self.cfg.display_gutter {
+                format!("{}{}{}{}{}",
+                    Goto(1, line_index as u16+1),
+                    ClearLine,
+                    (line_no+1).to_string(),
+                    Goto(self.cfg.gutter_size+1, line_index as u16 + 1),
+                    &text
+                )
+            } else {
+                format!("{}{}{}", Goto(0, line_index as u16 + 1), ClearLine, &text)
+            }
         } else {
-            format!("{}{}{}", Goto(self.gutter_size+1, line_index as u16 + 1), ClearLine, &text)
+            format!("{}{}{}", Goto(self.cfg.gutter_size+1, line_index as u16 + 1), ClearLine, &text)
         }
     }
 
@@ -418,7 +425,7 @@ impl View {
             .fold(0, |acc, c| { acc + self.translate_char_width(acc, c) });
 
         // Draw the cursor
-        let cursor_pos = Goto(self.gutter_size + column + 1, line_pos as u16 + 1);
+        let cursor_pos = Goto(self.cfg.gutter_size + column + 1, line_pos as u16 + 1);
         if let Err(e) = write!(w, "{}", cursor_pos) {
             error!("failed to render cursor: {}", e);
         }

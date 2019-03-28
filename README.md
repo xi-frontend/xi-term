@@ -74,6 +74,7 @@ Currently supported commands:
 | mu | move-up | Move the cursor one line up |
 | md | move-down | Move the cursor one line down |
 | t `theme` | theme `theme-name` | Set the theme to `theme`|
+| ln | line-numbers | Toggle displaying line numbers |
 
 Future commands:
 
