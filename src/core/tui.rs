@@ -71,6 +71,7 @@ impl Tui {
             Command::MoveDown => self.editor.move_down(),
             Command::PageDown => self.editor.page_down(),
             Command::PageUp => self.editor.page_up(),
+            Command::ToggleLineNumbers => self.editor.toggle_line_numbers(),
         }
     }
 
@@ -171,7 +172,7 @@ impl Future for Tui {
 
         if let Err(e) = self.render() {
             error!("error: {}", e);
-            error!("caused by: {}", e.cause());
+            error!("caused by: {}", e.as_fail());
         }
 
         if self.shutdown {

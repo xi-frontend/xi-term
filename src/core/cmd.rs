@@ -38,6 +38,8 @@ pub enum Command {
     PageUp,
     /// Change the syntax theme.
     SetTheme(String),
+    /// Toggle displaying line numbers.
+    ToggleLineNumbers,
 }
 
 #[derive(Debug)]
@@ -69,6 +71,7 @@ impl FromStr for Command {
             "mr" | "move-right" => Ok(Command::MoveRight),
             "mu" | "move-up" => Ok(Command::MoveUp),
             "md" | "move-down" => Ok(Command::MoveDown),
+            "ln" | "line-numbers" => Ok(Command::ToggleLineNumbers),
             command => {
                 let mut parts: Vec<&str> = command.split(' ').collect();
 
