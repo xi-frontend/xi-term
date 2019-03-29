@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashMap;
 use std::io::Write;
 
@@ -137,7 +138,9 @@ impl View {
         }
         let cursor_line = self.cursor.line - self.cache.before();
         let nb_lines = self.cache.lines().len() as u64;
-        self.cfg.gutter_size = (self.cache.before() + nb_lines + self.cache.after()).to_string().len() as u16;
+        let gutter_size = (self.cache.before() + nb_lines + self.cache.after()).to_string().len() as u16;
+        let gutter_size = gutter_size + 1; // Space between line number and content
+        self.cfg.gutter_size = max(gutter_size, 4); //  min gutter width 4
         self.window.update(cursor_line, nb_lines);
     }
 
@@ -268,10 +271,12 @@ impl View {
         let text = self.escape_control_and_add_styles(styles, line);
         if let Some(line_no) = lineno {
             if self.cfg.display_gutter {
+                let line_no = (line_no+1).to_string();
+                let line_no_offset = self.cfg.gutter_size - line_no.len() as u16;
                 format!("{}{}{}{}{}",
-                    Goto(1, line_index as u16+1),
+                    Goto(line_no_offset, line_index as u16+1),
                     ClearLine,
-                    (line_no+1).to_string(),
+                    line_no,
                     Goto(self.cfg.gutter_size+1, line_index as u16 + 1),
                     &text
                 )
