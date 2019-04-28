@@ -85,6 +85,16 @@ impl Client {
         spawn(f);
     }
 
+    pub fn undo(&mut self) {
+        let f = self.inner.undo(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn redo(&mut self) {
+        let f = self.inner.redo(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
+
     pub fn select_all(&mut self) {
         let f = self.inner.select_all(self.view_id).map_err(|_| ());
         spawn(f);
