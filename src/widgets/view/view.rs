@@ -293,7 +293,7 @@ impl View {
         let mut text = String::with_capacity(line.text.capacity());
         for c in line.text.chars() {
             match c {
-                '\x00'...'\x08' | '\x0a'...'\x1f' | '\x7f' => {
+                '\x00'..='\x08' | '\x0a'..='\x1f' | '\x7f' => {
                     // Render in caret notation, i.e. '\x02' is rendered as '^B'
                     text.push('^');
                     text.push((c as u8 ^ 0x40u8) as char);
@@ -440,7 +440,7 @@ impl View {
     fn translate_char_width(&self, position: u16, c: char) -> u16 {
         match c {
             // Caret notation means non-tab control characters are two columns wide
-            '\x00'...'\x08' | '\x0a'...'\x1f' | '\x7f' => 2,
+            '\x00'..='\x08' | '\x0a'..='\x1f' | '\x7f' => 2,
             '\t' => self.tab_width_at_position(position),
             _ => 1
         }
