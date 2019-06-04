@@ -5,10 +5,7 @@ use futures::{future, Async, Future, Poll, Sink, Stream};
 
 use termion::event::{Event, Key};
 use tokio::run;
-use xrl::{
-    AvailablePlugins, Client, ConfigChanged, Frontend, FrontendBuilder, PluginStarted,
-    PluginStoped, ScrollTo, ServerResult, Style, ThemeChanged, Update, UpdateCmds,
-};
+use xrl::{Client, MeasureWidth, XiNotification, Update, ScrollTo, Style, ConfigChanged, ServerResult, Frontend, FrontendBuilder};
 
 use failure::Error;
 use xdg::BaseDirectories;
@@ -205,34 +202,19 @@ impl TuiService {
 }
 
 impl Frontend for TuiService {
-    fn update(&mut self, update: Update) -> ServerResult<()> {
-        self.send_core_event(CoreEvent::Update(update))
+    fn handle_notification(&mut self, notification: XiNotification) -> ServerResult<()> {
+        use self::XiNotification::*;
+        match notification {
+            Update(update) => self.send_core_event(CoreEvent::Update(update)),
+            ScrollTo(scroll_to) => self.send_core_event(CoreEvent::ScrollTo(scroll_to)),
+            DefStyle(style) => self.send_core_event(CoreEvent::SetStyle(style)),
+            ConfigChanged(config) => self.send_core_event(CoreEvent::ConfigChanged(config)),
+            _ => Box::new(future::ok(())),
+        }
     }
 
-    fn scroll_to(&mut self, scroll_to: ScrollTo) -> ServerResult<()> {
-        self.send_core_event(CoreEvent::ScrollTo(scroll_to))
-    }
-
-    fn def_style(&mut self, style: Style) -> ServerResult<()> {
-        self.send_core_event(CoreEvent::SetStyle(style))
-    }
-    fn available_plugins(&mut self, _plugins: AvailablePlugins) -> ServerResult<()> {
-        Box::new(future::ok(()))
-    }
-    fn update_cmds(&mut self, _plugins: UpdateCmds) -> ServerResult<()> {
-        Box::new(future::ok(()))
-    }
-    fn plugin_started(&mut self, _plugins: PluginStarted) -> ServerResult<()> {
-        Box::new(future::ok(()))
-    }
-    fn plugin_stoped(&mut self, _plugin: PluginStoped) -> ServerResult<()> {
-        Box::new(future::ok(()))
-    }
-    fn config_changed(&mut self, config: ConfigChanged) -> ServerResult<()> {
-        self.send_core_event(CoreEvent::ConfigChanged(config))
-    }
-    fn theme_changed(&mut self, _theme: ThemeChanged) -> ServerResult<()> {
-        Box::new(future::ok(()))
+    fn handle_measure_width(&mut self, _request: MeasureWidth) -> ServerResult<Vec<(f32, f32)>> {
+        unimplemented!()
     }
 }
 
