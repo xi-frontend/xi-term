@@ -22,7 +22,7 @@ pub struct Tui {
 }
 
 impl Tui {
-    pub fn new(mut client: Client, events: UnboundedReceiver<CoreEvent>) -> Result<Self, Error> {
+    pub fn new(client: Client, events: UnboundedReceiver<CoreEvent>) -> Result<Self, Error> {
         let conf_dir = BaseDirectories::with_prefix("xi")
             .ok()
             .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
