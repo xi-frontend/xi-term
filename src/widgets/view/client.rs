@@ -91,7 +91,10 @@ impl Client {
     }
 
     pub fn click(&mut self, line: u64, column: u64) {
-        let f = self.inner.click_point_select(self.view_id, line, column).map_err(|_| ());
+        let f = self
+            .inner
+            .click_point_select(self.view_id, line, column)
+            .map_err(|_| ());
         spawn(f);
     }
 

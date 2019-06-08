@@ -5,7 +5,10 @@ use futures::{future, Async, Future, Poll, Sink, Stream};
 
 use termion::event::{Event, Key};
 use tokio::run;
-use xrl::{Client, MeasureWidth, XiNotification, Update, ScrollTo, Style, ConfigChanged, ServerResult, Frontend, FrontendBuilder};
+use xrl::{
+    Client, ConfigChanged, Frontend, FrontendBuilder, MeasureWidth, ScrollTo, ServerResult, Style,
+    Update, XiNotification,
+};
 
 use failure::Error;
 use xdg::BaseDirectories;
@@ -28,8 +31,7 @@ impl Tui {
             .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
         run(client
             .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
-            .map_err(|_| ())
-        );
+            .map_err(|_| ()));
 
         Ok(Tui {
             term: Terminal::new()?,
@@ -79,9 +81,9 @@ impl Tui {
             Event::Key(Key::Alt('x')) => {
                 if let Some(ref mut prompt) = self.prompt {
                     match prompt.handle_input(&event) {
-                        Ok(None) => {},
+                        Ok(None) => {}
                         Ok(Some(_)) => unreachable!(),
-                        Err(_) => unreachable!()
+                        Err(_) => unreachable!(),
                     }
                 } else {
                     self.prompt = Some(CommandPrompt::default());
@@ -97,7 +99,9 @@ impl Tui {
                 // A command prompt is active.
                 let mut prompt = self.prompt.take().unwrap();
                 match prompt.handle_input(&event) {
-                    Ok(None) => { self.prompt = Some(prompt); },
+                    Ok(None) => {
+                        self.prompt = Some(prompt);
+                    }
                     Ok(Some(cmd)) => self.handle_cmd(cmd),
                     Err(err) => {
                         error!("Failed to parse command: {:?}", err);
@@ -154,7 +158,7 @@ pub enum CoreEvent {
     Update(Update),
     ScrollTo(ScrollTo),
     SetStyle(Style),
-    ConfigChanged(ConfigChanged)
+    ConfigChanged(ConfigChanged),
 }
 
 impl Future for Tui {

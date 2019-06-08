@@ -4,11 +4,11 @@ use std::io::Write;
 use futures::sync::mpsc::UnboundedReceiver;
 use futures::{Async, Future, Stream};
 
+use failure::Error;
+use indexmap::IndexMap;
 use termion::event::Event;
 use tokio::run;
-use xrl::{Client, ClientResult, ScrollTo, ConfigChanged, Style, Update, ViewId};
-use indexmap::IndexMap;
-use failure::Error;
+use xrl::{Client, ClientResult, ConfigChanged, ScrollTo, Style, Update, ViewId};
 
 use core::CoreEvent;
 use widgets::{View, ViewClient};
@@ -109,7 +109,10 @@ impl Editor {
             .new_view(file_path.clone())
             .and_then(move |view_id| {
                 let view_client = ViewClient::new(client, view_id);
-                Ok((view_id, View::new(view_client, Some(file_path.unwrap_or_else(|| "".into())))))
+                Ok((
+                    view_id,
+                    View::new(view_client, Some(file_path.unwrap_or_else(|| "".into()))),
+                ))
             });
         self.pending_open_requests.push(Box::new(task));
     }
@@ -148,12 +151,12 @@ impl Editor {
 
     pub fn next_buffer(&mut self) {
         if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
-            if dex+1 == self.views.len() {
+            if dex + 1 == self.views.len() {
                 if let Some((view, _)) = self.views.get_index(0) {
                     self.current_view = *view;
                 }
-            } else if let Some((view, _)) = self.views.get_index(dex+1) {
-                    self.current_view = *view;
+            } else if let Some((view, _)) = self.views.get_index(dex + 1) {
+                self.current_view = *view;
             }
         }
     }
@@ -161,11 +164,11 @@ impl Editor {
     pub fn prev_buffer(&mut self) {
         if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
             if dex == 0 {
-                if let Some((view, _)) = self.views.get_index(self.views.len()-1) {
+                if let Some((view, _)) = self.views.get_index(self.views.len() - 1) {
                     self.current_view = *view;
                 }
-            } else if let Some((view, _)) = self.views.get_index(dex-1) {
-                    self.current_view = *view;
+            } else if let Some((view, _)) = self.views.get_index(dex - 1) {
+                self.current_view = *view;
             }
         }
     }

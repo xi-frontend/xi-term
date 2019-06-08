@@ -1,7 +1,6 @@
 //! Command system for xi-term. A command represents
 //! a task the user wants the editor to preform,
 /// currently commands can only be input through the CommandPrompt. Vim style.
-
 use xrl::ViewId;
 
 use std::str::FromStr;
@@ -47,9 +46,17 @@ pub enum ParseCommandError {
     /// Didnt expect a command to take an argument.
     UnexpectedArgument,
     /// The given command expected an argument.
-    ExpectedArgument { cmd: String, expected: usize , found: usize},
+    ExpectedArgument {
+        cmd: String,
+        expected: usize,
+        found: usize,
+    },
     /// The given command was given to many arguments.
-    TooManyArguments{ cmd: String, expected: usize, found: usize},
+    TooManyArguments {
+        cmd: String,
+        expected: usize,
+        found: usize,
+    },
     /// Invalid input was received.
     UnknownCommand(String),
 }
@@ -64,7 +71,7 @@ impl FromStr for Command {
             "b" | "back" => Ok(Command::Back),
             "d" | "delete" => Ok(Command::Delete),
             "bn" | "next-buffer" => Ok(Command::NextBuffer),
-            "bp" | "prev-buffer" =>Ok(Command::PrevBuffer),
+            "bp" | "prev-buffer" => Ok(Command::PrevBuffer),
             "pd" | "page-down" => Ok(Command::PageDown),
             "pu" | "page-up" => Ok(Command::PageUp),
             "ml" | "move-left" => Ok(Command::MoveLeft),
@@ -82,18 +89,18 @@ impl FromStr for Command {
                             Err(ParseCommandError::ExpectedArgument {
                                 cmd: "theme".into(),
                                 expected: 1,
-                                found: 0
+                                found: 0,
                             })
                         } else if parts.len() > 1 {
                             Err(ParseCommandError::TooManyArguments {
                                 cmd: cmd.to_owned(),
                                 expected: 1,
-                                found: parts.len()
+                                found: parts.len(),
                             })
                         } else {
                             Ok(Command::SetTheme(parts[0].to_owned()))
                         }
-                    },
+                    }
                     "o" | "open" => {
                         if parts.is_empty() {
                             Ok(Command::Open(None))
@@ -103,7 +110,7 @@ impl FromStr for Command {
                             Ok(Command::Open(Some(parts[0].to_owned())))
                         }
                     }
-                    _ => Err(ParseCommandError::UnknownCommand(command.into()))
+                    _ => Err(ParseCommandError::UnknownCommand(command.into())),
                 }
             }
         }

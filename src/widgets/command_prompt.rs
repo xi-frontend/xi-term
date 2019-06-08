@@ -76,7 +76,14 @@ impl CommandPrompt {
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
-        if let Err(err) = write!(w, "{}{}:{}{}", Goto(1, row), ClearLine, self.chars, Goto(self.dex as u16+2, row)) {
+        if let Err(err) = write!(
+            w,
+            "{}{}:{}{}",
+            Goto(1, row),
+            ClearLine,
+            self.chars,
+            Goto(self.dex as u16 + 2, row)
+        ) {
             error!("faile to render status bar: {:?}", err);
         }
         Ok(())

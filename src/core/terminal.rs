@@ -69,15 +69,17 @@ impl Terminal {
             info!("waiting for resize events");
             loop {
                 match terminal_size() {
-                    Ok(new_size) => if new_size != current_size {
-                        info!(
-                            "terminal resized (from {:?} to {:?})",
-                            current_size, new_size
-                        );
-                        current_size = new_size;
-                        let _ = tx.start_send(current_size).unwrap();
-                        let _ = tx.poll_complete().unwrap();
-                    },
+                    Ok(new_size) => {
+                        if new_size != current_size {
+                            info!(
+                                "terminal resized (from {:?} to {:?})",
+                                current_size, new_size
+                            );
+                            current_size = new_size;
+                            let _ = tx.start_send(current_size).unwrap();
+                            let _ = tx.poll_complete().unwrap();
+                        }
+                    }
                     Err(e) => {
                         error!("failed to get terminal size: {}", e);
                     }

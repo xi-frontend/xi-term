@@ -6,12 +6,12 @@ use failure::Error;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
-use xrl::{Line, LineCache, Style, Update, ConfigChanges};
+use xrl::{ConfigChanges, Line, LineCache, Style, Update};
 
+use super::cfg::ViewConfig;
 use super::client::Client;
 use super::style::{reset_style, set_style};
 use super::window::Window;
-use super::cfg::ViewConfig;
 
 #[derive(Debug, Default)]
 pub struct Cursor {
@@ -25,7 +25,7 @@ pub struct View {
     window: Window,
     file: Option<String>,
     client: Client,
-    cfg: ViewConfig
+    cfg: ViewConfig,
 }
 
 impl View {
@@ -138,7 +138,9 @@ impl View {
         }
         let cursor_line = self.cursor.line - self.cache.before();
         let nb_lines = self.cache.lines().len() as u64;
-        let gutter_size = (self.cache.before() + nb_lines + self.cache.after()).to_string().len() as u16;
+        let gutter_size = (self.cache.before() + nb_lines + self.cache.after())
+            .to_string()
+            .len() as u16;
         let gutter_size = gutter_size + 1; // Space between line number and content
         self.cfg.gutter_size = max(gutter_size, 4); //  min gutter width 4
         self.window.update(cursor_line, nb_lines);
@@ -159,9 +161,12 @@ impl View {
                     // the click occurred within the character. Otherwise,
                     // the click occurred on the character at idx + 1
                     if char_width > 1 {
-                        return (lineno as u64, (idx-self.cfg.gutter_size as usize) as u64);
+                        return (lineno as u64, (idx - self.cfg.gutter_size as usize) as u64);
                     } else {
-                        return (lineno as u64, (idx-self.cfg.gutter_size as usize) as u64 + 1);
+                        return (
+                            lineno as u64,
+                            (idx - self.cfg.gutter_size as usize) as u64 + 1,
+                        );
                     }
                 }
             }
@@ -189,7 +194,7 @@ impl View {
                     '\n' => self.insert_newline(),
                     '\t' => self.insert_tab(),
                     _ => self.insert(c),
-                }
+                },
                 Key::Ctrl(c) => match c {
                     'w' => self.save(),
                     'h' => self.back(),
@@ -233,11 +238,9 @@ impl View {
             .skip(self.window.start() as usize)
             .take(self.window.size() as usize);
 
-
-
         // Draw the valid lines within this range
         let mut line_strings = String::new();
-        let mut line_no = self.cache.before()+self.window.start();
+        let mut line_no = self.cache.before() + self.window.start();
         for (line_index, line) in lines.enumerate() {
             line_strings.push_str(&self.render_line_str(line, Some(line_no), line_index, styles));
             line_no += 1;
@@ -267,24 +270,36 @@ impl View {
         self.cfg.tab_size - (position % self.cfg.tab_size)
     }
 
-    fn render_line_str(&self, line: &Line, lineno: Option<u64>, line_index: usize, styles: &HashMap<u64, Style>) -> String {
+    fn render_line_str(
+        &self,
+        line: &Line,
+        lineno: Option<u64>,
+        line_index: usize,
+        styles: &HashMap<u64, Style>,
+    ) -> String {
         let text = self.escape_control_and_add_styles(styles, line);
         if let Some(line_no) = lineno {
             if self.cfg.display_gutter {
-                let line_no = (line_no+1).to_string();
+                let line_no = (line_no + 1).to_string();
                 let line_no_offset = self.cfg.gutter_size - line_no.len() as u16;
-                format!("{}{}{}{}{}",
-                    Goto(line_no_offset, line_index as u16+1),
+                format!(
+                    "{}{}{}{}{}",
+                    Goto(line_no_offset, line_index as u16 + 1),
                     ClearLine,
                     line_no,
-                    Goto(self.cfg.gutter_size+1, line_index as u16 + 1),
+                    Goto(self.cfg.gutter_size + 1, line_index as u16 + 1),
                     &text
                 )
             } else {
                 format!("{}{}{}", Goto(0, line_index as u16 + 1), ClearLine, &text)
             }
         } else {
-            format!("{}{}{}", Goto(self.cfg.gutter_size+1, line_index as u16 + 1), ClearLine, &text)
+            format!(
+                "{}{}{}",
+                Goto(self.cfg.gutter_size + 1, line_index as u16 + 1),
+                ClearLine,
+                &text
+            )
         }
     }
 
@@ -298,16 +313,16 @@ impl View {
                     text.push('^');
                     text.push((c as u8 ^ 0x40u8) as char);
                     position += 2;
-                },
+                }
                 '\t' => {
                     let tab_width = self.tab_width_at_position(position);
                     text.push_str(&" ".repeat(tab_width as usize));
                     position += tab_width;
-                },
+                }
                 _ => {
                     text.push(c);
                     position += 1;
-                },
+                }
             }
         }
         if line.styles.is_empty() {
@@ -427,7 +442,7 @@ impl View {
             .text
             .chars()
             .take(self.cursor.column as usize)
-            .fold(0, |acc, c| { acc + self.translate_char_width(acc, c) });
+            .fold(0, |acc, c| acc + self.translate_char_width(acc, c));
 
         // Draw the cursor
         let cursor_pos = Goto(self.cfg.gutter_size + column + 1, line_pos as u16 + 1);
@@ -442,7 +457,7 @@ impl View {
             // Caret notation means non-tab control characters are two columns wide
             '\x00'..='\x08' | '\x0a'..='\x1f' | '\x7f' => 2,
             '\t' => self.tab_width_at_position(position),
-            _ => 1
+            _ => 1,
         }
     }
 }

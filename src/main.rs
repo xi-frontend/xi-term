@@ -12,11 +12,11 @@ extern crate log;
 extern crate log4rs;
 
 extern crate futures;
+extern crate indexmap;
 extern crate termion;
 extern crate tokio;
 extern crate xdg;
 extern crate xrl;
-extern crate indexmap;
 
 mod core;
 mod widgets;
@@ -28,7 +28,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
 
-use core::{Tui, TuiServiceBuilder, Command};
+use core::{Command, Tui, TuiServiceBuilder};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();
@@ -111,7 +111,9 @@ fn run() -> Result<(), Error> {
     info!("initializing the TUI");
     let mut tui = Tui::new(client, core_events_rx).context("Failed to initialize the TUI")?;
 
-    tui.handle_cmd(Command::Open(matches.value_of("file").map(ToString::to_string)));
+    tui.handle_cmd(Command::Open(
+        matches.value_of("file").map(ToString::to_string),
+    ));
     tui.handle_cmd(Command::SetTheme("base16-eighties.dark".into()));
 
     info!("spawning the TUI on the event loop");
