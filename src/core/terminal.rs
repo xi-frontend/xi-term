@@ -104,28 +104,40 @@ impl Stream for Terminal {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        debug!("polling for terminal size events");
         match self.size.poll() {
             Ok(Async::Ready(Some(size))) => {
-                return Ok(Async::Ready(Some(TerminalEvent::Resize(size))))
+                debug!("size event: {:?}", size);
+                let event = TerminalEvent::Resize(size);
+                return Ok(Async::Ready(Some(event)));
             }
             Ok(Async::Ready(None)) => {
                 warn!("terminal size sender closed the channel");
                 return Ok(Async::Ready(None));
             }
-            Ok(Async::NotReady) => {}
+            Ok(Async::NotReady) => {
+                debug!("done polling for terminal size events");
+            }
             Err(()) => return Err(()),
         }
+
+        debug!("polling for stdin events");
         match self.stdin.poll() {
             Ok(Async::Ready(Some(event))) => {
-                return Ok(Async::Ready(Some(TerminalEvent::Input(event))))
+                debug!("stdin event: {:?}", event);
+                let event = TerminalEvent::Input(event);
+                return Ok(Async::Ready(Some(event)));
             }
             Ok(Async::Ready(None)) => {
                 warn!("terminal input sender closed the channel");
                 return Ok(Async::Ready(None));
             }
-            Ok(Async::NotReady) => {}
+            Ok(Async::NotReady) => {
+                debug!("done polling for stdin events");
+            }
             Err(()) => return Err(()),
         }
+        debug!("done polling the terminal");
         Ok(Async::NotReady)
     }
 }

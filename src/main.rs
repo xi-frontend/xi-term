@@ -20,9 +20,10 @@ extern crate xrl;
 
 mod core;
 mod widgets;
+use xdg::BaseDirectories;
 
-use failure::{Error, ResultExt};
-use futures::{Future, Stream};
+use failure::Error;
+use futures::{future, Future, Stream};
 use log::LevelFilter;
 use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
@@ -92,33 +93,45 @@ fn run() -> Result<(), Error> {
         configure_logs(logfile);
     }
 
-    info!("starting xi-core");
-    let (tui_builder, core_events_rx) = TuiServiceBuilder::new();
-    let (client, core_stderr) = spawn(matches.value_of("core").unwrap_or("xi-core"), tui_builder);
+    tokio::run(future::lazy(move || {
+        info!("starting xi-core");
+        let (tui_service_builder, core_events_rx) = TuiServiceBuilder::new();
+        let (client, core_stderr) = spawn(
+            matches.value_of("core").unwrap_or("xi-core"),
+            tui_service_builder,
+        );
 
-    let error_logging = core_stderr
-        .for_each(|msg| {
-            error!("core: {}", msg);
-            Ok(())
-        })
-        .map_err(|_| ());
-    ::std::thread::spawn(move || {
-        tokio::run(error_logging);
-    });
+        info!("starting logging xi-core errors");
+        tokio::spawn(
+            core_stderr
+                .for_each(|msg| {
+                    error!("core: {}", msg);
+                    Ok(())
+                })
+                .map_err(|_| ()),
+        );
 
-    info!("starting logging xi-core errors");
+        tokio::spawn(future::lazy(move || {
+            let conf_dir = BaseDirectories::with_prefix("xi")
+                .ok()
+                .and_then(|dirs| Some(dirs.get_config_home().to_string_lossy().into_owned()));
 
-    info!("initializing the TUI");
-    let mut tui = Tui::new(client, core_events_rx).context("Failed to initialize the TUI")?;
-
-    tui.handle_cmd(Command::Open(
-        matches.value_of("file").map(ToString::to_string),
-    ));
-    tui.handle_cmd(Command::SetTheme("base16-eighties.dark".into()));
-
-    info!("spawning the TUI on the event loop");
-    tokio::run(tui.map_err(|err| {
-        error!("{}", err);
+            let client_clone = client.clone();
+            client
+                .client_started(conf_dir.as_ref().map(|dir| &**dir), None)
+                .map_err(|e| error!("failed to send \"client_started\" {:?}", e))
+                .and_then(move |_| {
+                    info!("initializing the TUI");
+                    let mut tui = Tui::new(client_clone, core_events_rx)
+                        .expect("failed to initialize the TUI");
+                    tui.run_command(Command::Open(
+                        matches.value_of("file").map(ToString::to_string),
+                    ));
+                    tui.run_command(Command::SetTheme("base16-eighties.dark".into()));
+                    tui.map_err(|e| error!("TUI exited with an error: {:?}", e))
+                })
+        }));
+        Ok(())
     }));
     Ok(())
 }
