@@ -1,57 +1,128 @@
 use std::collections::HashMap;
 use std::io::Write;
 
-use futures::sync::mpsc::UnboundedReceiver;
-use futures::{Async, Future, Stream};
+use futures::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use futures::{Async, Future, Poll, Stream};
 
 use failure::Error;
 use indexmap::IndexMap;
-use termion::event::Event;
-use tokio::run;
-use xrl::{Client, ClientResult, ConfigChanged, ScrollTo, Style, Update, ViewId};
+use termion::event::Event as TermionEvent;
+use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
 use core::CoreEvent;
 use widgets::{View, ViewClient};
 
 /// The main interface to xi-core
 pub struct Editor {
-    pub pending_open_requests: Vec<ClientResult<(ViewId, View)>>,
+    /// Channel from which the responses to "new_view" requests are
+    /// received. Upon receiving a `ViewId`, the `Editdor` creates a
+    /// new view.
+    pub new_view_rx: UnboundedReceiver<(ViewId, Option<String>)>,
+
+    /// Channel into which the responses to "new_view" requests are
+    /// sent, when they are received from the core.
+    pub new_view_tx: UnboundedSender<(ViewId, Option<String>)>,
+
+    /// Store the events that we cannot process right away.
+    ///
+    /// Due to the asynchronous nature of the communication with the
+    /// core, we may receive events we cannot process on the
+    /// moment. For instance, when opening a new view, we may receive
+    /// notifications for it whereas we are not even done processing
+    /// the response to the "open" request, and hence, the view might
+    /// not even be created on our side yet.
     pub delayed_events: Vec<CoreEvent>,
+
+    /// The views that are opened.
     pub views: IndexMap<ViewId, View>,
+
+    /// Id of the view that is currently displayed on screen.
     pub current_view: ViewId,
-    pub events: UnboundedReceiver<CoreEvent>,
+
+    /// A client to send notifications or request to `xi-core`.
     pub client: Client,
+
     pub size: (u16, u16),
     pub styles: HashMap<u64, Style>,
 }
 
 /// Methods for general use.
 impl Editor {
-    pub fn new(client: Client, events: UnboundedReceiver<CoreEvent>) -> Editor {
+    pub fn new(client: Client) -> Editor {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
+        let (new_view_tx, new_view_rx) = mpsc::unbounded::<(ViewId, Option<String>)>();
 
         Editor {
-            events,
+            new_view_rx,
+            new_view_tx,
             delayed_events: Vec::new(),
-            pending_open_requests: Vec::new(),
-            size: (0, 0),
             views: IndexMap::new(),
-            styles,
             current_view: ViewId(0),
             client,
+            size: (0, 0),
+            styles,
         }
     }
 }
 
-/// Methods related to terminal input.
+// Strictly speaking we don't have to implement Future for the editor,
+// because we don't spawn it on the tokio runtime. But I'm still
+// somewhat undecided whether we should or not, and having the editor
+// implemented as a Future will make things easier if we decide to go
+// that way.
+impl Future for Editor {
+    type Item = ();
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        debug!("polling the editor");
+
+        debug!("handling delayed events");
+        if !self.delayed_events.is_empty() {
+            let delayed_events: Vec<CoreEvent> = self.delayed_events.drain(..).collect();
+            for event in delayed_events {
+                self.handle_core_event(event);
+            }
+        }
+
+        debug!("polling 'new_view' responses");
+        loop {
+            match self.new_view_rx.poll() {
+                Ok(Async::Ready(Some((view_id, file_path)))) => {
+                    info!("creating new view {:?}", view_id);
+                    let client = ViewClient::new(self.client.clone(), view_id);
+                    let mut view = View::new(client, file_path);
+                    view.resize(self.size.1);
+                    self.views.insert(view_id, view);
+                    info!("switching to view {:?}", view_id);
+                    self.current_view = view_id;
+                }
+                // We own one of the senders so this cannot happen
+                Ok(Async::Ready(None)) => unreachable!(),
+                Ok(Async::NotReady) => {
+                    debug!("no more 'new_view' response");
+                    break;
+                }
+                Err(e) => {
+                    error!("Uknown channel error: {:?}", e);
+                    return Err(());
+                }
+            }
+        }
+        Ok(Async::NotReady)
+    }
+}
+
 impl Editor {
-    pub fn handle_input(&mut self, event: Event) {
+    /// Handle keyboard and mouse events
+    pub fn handle_input(&mut self, event: TermionEvent) {
         if let Some(view) = self.views.get_mut(&self.current_view) {
             view.handle_input(event)
         }
     }
 
+    /// Handle terminal size changes
     pub fn handle_resize(&mut self, size: (u16, u16)) {
         info!("setting new terminal size");
         self.size = size;
@@ -61,79 +132,89 @@ impl Editor {
             warn!("view {} not found", self.current_view);
         }
     }
-}
 
-/// Methods related to handling things received from xi-core.
-impl Editor {
-    pub fn dispatch_core_event(&mut self, event: CoreEvent) {
+    /// Handle message from xi-core, that the TUI forwarded us.
+    pub fn handle_core_event(&mut self, event: CoreEvent) {
         match event {
-            CoreEvent::Update(update) => self.handle_update(update),
-            CoreEvent::SetStyle(style) => self.handle_def_style(style),
-            CoreEvent::ScrollTo(scroll_to) => self.handle_scroll_to(scroll_to),
-            CoreEvent::ConfigChanged(config) => self.handle_config_changed(config),
+            CoreEvent::Notify(notification) => match notification {
+                XiNotification::Update(update) => self.update(update),
+                XiNotification::DefStyle(style) => self.def_style(style),
+                XiNotification::ScrollTo(scroll_to) => self.scroll_to(scroll_to),
+                XiNotification::ConfigChanged(config) => self.config_changed(config),
+                _ => info!("ignoring Xi core notification: {:?}", notification),
+            },
+            CoreEvent::MeasureWidth((_request, _result_tx)) => unimplemented!(),
         }
     }
 
-    fn handle_update(&mut self, update: Update) {
+    /// Handle an "update" notification from Xi core.
+    fn update(&mut self, update: Update) {
         match self.views.get_mut(&update.view_id) {
             Some(view) => view.update_cache(update),
-            None => self.delayed_events.push(CoreEvent::Update(update)),
+            None => self
+                .delayed_events
+                .push(CoreEvent::Notify(XiNotification::Update(update))),
         }
     }
 
-    fn handle_scroll_to(&mut self, scroll_to: ScrollTo) {
+    /// Handle a "scroll_to" notification from Xi core.
+    fn scroll_to(&mut self, scroll_to: ScrollTo) {
         match self.views.get_mut(&scroll_to.view_id) {
             Some(view) => view.set_cursor(scroll_to.line, scroll_to.column),
-            None => self.delayed_events.push(CoreEvent::ScrollTo(scroll_to)),
+            None => self
+                .delayed_events
+                .push(CoreEvent::Notify(XiNotification::ScrollTo(scroll_to))),
         }
     }
 
-    fn handle_def_style(&mut self, style: Style) {
+    /// Handle a "def_style" notification from Xi core.
+    fn def_style(&mut self, style: Style) {
         self.styles.insert(style.id, style);
     }
 
-    fn handle_config_changed(&mut self, config: ConfigChanged) {
+    /// Handle a "config_changed" notification from Xi core.
+    fn config_changed(&mut self, config: ConfigChanged) {
         match self.views.get_mut(&config.view_id) {
             Some(view) => view.config_changed(config.changes),
-            None => self.delayed_events.push(CoreEvent::ConfigChanged(config)),
+            None => self
+                .delayed_events
+                .push(CoreEvent::Notify(XiNotification::ConfigChanged(config))),
         }
     }
-}
 
-/// Methods related to sending xi requests.
-impl Editor {
-    pub fn open(&mut self, file_path: Option<String>) {
-        let client = self.client.clone();
-        let task = self
+    /// Spawn a future that sends a "new_view" request to the core,
+    /// and forwards the response back to the `Editor`.
+    pub fn new_view(&mut self, file_path: Option<String>) {
+        let response_tx = self.new_view_tx.clone();
+        let future = self
             .client
             .new_view(file_path.clone())
-            .and_then(move |view_id| {
-                let view_client = ViewClient::new(client, view_id);
-                Ok((
-                    view_id,
-                    View::new(view_client, Some(file_path.unwrap_or_else(|| "".into()))),
-                ))
+            .and_then(move |id| {
+                // when we get the response from the core, forward the new
+                // view id to the editor so that the view can be created
+                response_tx
+                    .unbounded_send((id, file_path))
+                    .unwrap_or_else(|e| error!("failed to send \"new_view\" response: {:?}", e));
+                Ok(())
+            })
+            .or_else(|client_error| {
+                error!("failed to send \"new_view\" response: {:?}", client_error);
+                Ok(())
             });
-        self.pending_open_requests.push(Box::new(task));
+        tokio::spawn(future);
     }
 
+    /// Spawn a future that sends a "set_theme" notification to the
+    /// core for the current view.
     pub fn set_theme(&mut self, theme: &str) {
-        let future = self.client.set_theme(theme).map_err(|_| ());
-        run(future);
+        tokio::spawn(self.client.set_theme(theme).map_err(|_| ()));
     }
 
-    pub fn save(&mut self, view: Option<ViewId>) {
-        match view {
-            Some(view_id) => {
-                if let Some(view) = self.views.get_mut(&view_id) {
-                    view.save();
-                }
-            }
-            None => {
-                if let Some(view) = self.views.get_mut(&self.current_view) {
-                    view.save();
-                }
-            }
+    /// Spawn a future that sends a "save" notification to the core.
+    pub fn save(&mut self, view_id: Option<ViewId>) {
+        match self.views.get_mut(&view_id.unwrap_or(self.current_view)) {
+            Some(view) => view.save(),
+            None => warn!("cannot save view {:?}: not found", &view_id),
         }
     }
 
@@ -218,65 +299,17 @@ impl Editor {
 
 /// Methods ment to be called by the tui struct
 impl Editor {
-    pub fn process_open_requests(&mut self) {
-        if self.pending_open_requests.is_empty() {
-            return;
-        }
-
-        info!("process pending open requests");
-
-        let mut done = vec![];
-        for (idx, task) in self.pending_open_requests.iter_mut().enumerate() {
-            match task.poll() {
-                Ok(Async::Ready((id, mut view))) => {
-                    info!("open request succeeded for {}", &id);
-                    done.push(idx);
-                    view.resize(self.size.1);
-                    self.views.insert(id, view);
-                    self.current_view = id;
-                }
-                Ok(Async::NotReady) => continue,
-                Err(e) => panic!("\"open\" task failed: {}", e),
-            }
-        }
-        for idx in done.iter().rev() {
-            self.pending_open_requests.remove(*idx);
-        }
-
-        if self.pending_open_requests.is_empty() {
-            info!("no more pending open request");
-        }
-    }
-
-    pub fn process_core_events(&mut self) {
-        loop {
-            match self.events.poll() {
-                Ok(Async::Ready(Some(event))) => {
-                    self.dispatch_core_event(event);
-                }
-                Ok(Async::Ready(None)) => {
-                    error!("core stdout shut down => panicking");
-                    panic!("core stdout shut down");
-                }
-                Ok(Async::NotReady) => break,
-                Err(_) => {
-                    error!("error while polling core => panicking");
-                    panic!("error while polling core");
-                }
-            }
-        }
-    }
-
-    pub fn process_delayed_events(&mut self) {
-        let delayed_events: Vec<CoreEvent> = self.delayed_events.drain(..).collect();
-        for event in delayed_events {
-            self.dispatch_core_event(event);
-        }
-    }
-
+    // We render if:
+    //  - the current view is dirty
+    //  - we switched views
+    //  - the style changed
+    //  - the terminal size changed
     pub fn render<W: Write>(&mut self, term: &mut W) -> Result<(), Error> {
         if let Some(view) = self.views.get_mut(&self.current_view) {
+            debug!("rendering the current view");
             view.render(term, &self.styles)?;
+        } else {
+            warn!("no view to render");
         }
         Ok(())
     }
