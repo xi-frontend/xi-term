@@ -86,7 +86,7 @@ fn run() -> Result<(), Error> {
         (about: "The Xi Editor")
         (@arg core: -c --core +takes_value "Specify binary to use for the backend")
         (@arg logfile: -l --logfile +takes_value "Log file location")
-        (@arg file: +required "File to edit"));
+        (@arg file: "File to edit"));
 
     let matches = xi.get_matches();
     if let Some(logfile) = matches.value_of("logfile") {
