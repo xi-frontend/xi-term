@@ -4,12 +4,12 @@ use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 use futures::sync::oneshot::{self, Receiver, Sender};
 use futures::{Async, Future, Poll, Sink, Stream};
 
-use termion::event::{Event, Key};
+use termion::event::{Event};
 use xrl::{Client, Frontend, FrontendBuilder, MeasureWidth, XiNotification};
 
 use failure::Error;
 
-use core::{Command, Terminal, TerminalEvent};
+use core::{Command, Terminal, TerminalEvent, KeybindingConfig};
 use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
@@ -32,11 +32,13 @@ pub struct Tui {
 
     /// Stream of messages from Xi core.
     core_events: UnboundedReceiver<CoreEvent>,
+
+    keybindings: KeybindingConfig,
 }
 
 impl Tui {
     /// Create a new Tui instance.
-    pub fn new(client: Client, events: UnboundedReceiver<CoreEvent>) -> Result<Self, Error> {
+    pub fn new(client: Client, events: UnboundedReceiver<CoreEvent>, keybindings: KeybindingConfig) -> Result<Self, Error> {
         Ok(Tui {
             terminal: Terminal::new()?,
             exit: false,
@@ -44,6 +46,7 @@ impl Tui {
             editor: Editor::new(client),
             prompt: None,
             core_events: events,
+            keybindings: keybindings,
         })
     }
 
@@ -54,9 +57,8 @@ impl Tui {
 
     pub fn run_command(&mut self, cmd: Command) {
         match cmd {
-            Command::Cancel => {
-                self.prompt = None;
-            }
+            Command::OpenPrompt => self.open_prompt(),
+            Command::Cancel => self.prompt = None,
             Command::Quit => self.exit = true,
             Command::Save(view) => self.editor.save(view),
             Command::Back => self.editor.back(),
@@ -75,40 +77,43 @@ impl Tui {
         }
     }
 
+    fn open_prompt(&mut self) {
+        if self.prompt.is_none() {
+            self.prompt = Some(CommandPrompt::default());
+        }
+    }
+
     /// Global keybindings can be parsed here
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
-        match event {
-            Event::Key(Key::Ctrl('c')) => self.exit = true,
-            Event::Key(Key::Alt('x')) => {
-                if let Some(ref mut prompt) = self.prompt {
-                    match prompt.handle_input(&event) {
-                        Ok(None) => {}
-                        Ok(Some(_)) => unreachable!(),
-                        Err(_) => unreachable!(),
-                    }
-                } else {
-                    self.prompt = Some(CommandPrompt::default());
-                }
-            }
-            event => {
-                // No command prompt is active, process the event normally.
-                if self.prompt.is_none() {
-                    self.editor.handle_input(event);
-                    return;
-                }
 
-                // A command prompt is active.
-                let mut prompt = self.prompt.take().unwrap();
-                match prompt.handle_input(&event) {
-                    Ok(None) => {
-                        self.prompt = Some(prompt);
-                    }
-                    Ok(Some(cmd)) => self.run_command(cmd),
-                    Err(err) => {
-                        error!("Failed to parse command: {:?}", err);
-                    }
-                }
+        if let Some(cmd) = self.keybindings.keymap.get(&event) {
+            match cmd {
+                Command::OpenPrompt => {
+                                        if self.prompt.is_none() {
+                                            self.prompt = Some(CommandPrompt::default());
+                                        }
+                                        return; },
+                Command::Quit => { self.exit = true; return; },
+                _ => {/* Somebody else has to deal with these commands */},
+            }
+        }
+
+        // No command prompt is active, process the event normally.
+        if self.prompt.is_none() {
+            self.editor.handle_input(event);
+            return;
+        }
+
+        // A command prompt is active.
+        let mut prompt = self.prompt.take().unwrap();
+        match prompt.handle_input(&event) {
+            Ok(None) => {
+                self.prompt = Some(prompt);
+            }
+            Ok(Some(cmd)) => self.run_command(cmd),
+            Err(err) => {
+                error!("Failed to parse command: {:?}", err);
             }
         }
     }

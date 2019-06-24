@@ -5,7 +5,7 @@ use xrl::ViewId;
 
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Command {
     /// Close the CommandPrompt.
     Cancel,
@@ -39,6 +39,8 @@ pub enum Command {
     SetTheme(String),
     /// Toggle displaying line numbers.
     ToggleLineNumbers,
+    /// Open prompt for user-input
+    OpenPrompt,
 }
 
 #[derive(Debug)]
@@ -67,11 +69,11 @@ impl FromStr for Command {
     fn from_str(s: &str) -> Result<Command, Self::Err> {
         match &s[..] {
             "s" | "save" => Ok(Command::Save(None)),
-            "q" | "quit" => Ok(Command::Quit),
-            "b" | "back" => Ok(Command::Back),
-            "d" | "delete" => Ok(Command::Delete),
-            "bn" | "next-buffer" => Ok(Command::NextBuffer),
-            "bp" | "prev-buffer" => Ok(Command::PrevBuffer),
+            "q" | "quit" | "exit" => Ok(Command::Quit),
+            "b" | "back" | "left_delete" => Ok(Command::Back),
+            "d" | "delete" | "right_delete" => Ok(Command::Delete),
+            "bn" | "next-buffer" | "next_view" => Ok(Command::NextBuffer),
+            "bp" | "prev-buffer" | "prev_view" => Ok(Command::PrevBuffer),
             "pd" | "page-down" => Ok(Command::PageDown),
             "pu" | "page-up" => Ok(Command::PageUp),
             "ml" | "move-left" => Ok(Command::MoveLeft),
@@ -79,6 +81,7 @@ impl FromStr for Command {
             "mu" | "move-up" => Ok(Command::MoveUp),
             "md" | "move-down" => Ok(Command::MoveDown),
             "ln" | "line-numbers" => Ok(Command::ToggleLineNumbers),
+            "op" | "open-prompt" | "show_overlay" => Ok(Command::OpenPrompt),
             command => {
                 let mut parts: Vec<&str> = command.split(' ').collect();
 

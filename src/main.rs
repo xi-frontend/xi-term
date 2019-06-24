@@ -18,6 +18,10 @@ extern crate tokio;
 extern crate xdg;
 extern crate xrl;
 
+extern crate json5;
+extern crate serde;
+extern crate serde_json;
+
 mod core;
 mod widgets;
 use xdg::BaseDirectories;
@@ -29,7 +33,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
 
-use core::{Command, Tui, TuiServiceBuilder};
+use core::{Command, Tui, TuiServiceBuilder, KeybindingConfig};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();
@@ -93,6 +97,9 @@ fn run() -> Result<(), Error> {
         configure_logs(logfile);
     }
 
+    let configfile = std::path::Path::new("./configs/Default (Linux).sublime-keymap").to_owned();
+    let keybindings = KeybindingConfig::parse(&configfile).map_err(Error::from_boxed_compat)?;
+
     tokio::run(future::lazy(move || {
         info!("starting xi-core");
         let (tui_service_builder, core_events_rx) = TuiServiceBuilder::new();
@@ -122,7 +129,7 @@ fn run() -> Result<(), Error> {
                 .map_err(|e| error!("failed to send \"client_started\" {:?}", e))
                 .and_then(move |_| {
                     info!("initializing the TUI");
-                    let mut tui = Tui::new(client_clone, core_events_rx)
+                    let mut tui = Tui::new(client_clone, core_events_rx, keybindings)
                         .expect("failed to initialize the TUI");
                     tui.run_command(Command::Open(
                         matches.value_of("file").map(ToString::to_string),
