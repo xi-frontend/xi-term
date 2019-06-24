@@ -10,6 +10,7 @@ use xrl::{Client, Frontend, FrontendBuilder, MeasureWidth, XiNotification};
 use failure::Error;
 
 use core::{Command, Terminal, TerminalEvent, KeybindingConfig};
+use core::{AbsoluteMovePoint, RelativeMoveDistance};
 use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
@@ -67,12 +68,39 @@ impl Tui {
             Command::SetTheme(theme) => self.editor.set_theme(&theme),
             Command::NextBuffer => self.editor.next_buffer(),
             Command::PrevBuffer => self.editor.prev_buffer(),
-            Command::MoveLeft => self.editor.move_left(),
-            Command::MoveRight => self.editor.move_right(),
-            Command::MoveUp => self.editor.move_up(),
-            Command::MoveDown => self.editor.move_down(),
-            Command::PageDown => self.editor.page_down(),
-            Command::PageUp => self.editor.page_up(),
+            Command::RelativeMove(x) => {
+                match x.by {
+                    RelativeMoveDistance::characters => {
+                        if x.forward {
+                            self.editor.move_right()
+                        } else {
+                            self.editor.move_left()
+                        }
+                    },
+                    RelativeMoveDistance::pages => {
+                        if x.forward {
+                            self.editor.page_down()
+                        } else {
+                            self.editor.page_up()
+                        }
+                    },
+                    RelativeMoveDistance::lines => {
+                        if x.forward {
+                            self.editor.move_down()
+                        } else {
+                            self.editor.move_up()
+                        }
+                    },
+                    _ => unimplemented!()
+                }
+            }
+            Command::AbsoluteMove(x) => {
+                match x.to {
+                    AbsoluteMovePoint::bol => self.editor.home(),
+                    AbsoluteMovePoint::eol => self.editor.end(),
+                    _ => unimplemented!()
+                }
+            }
             Command::ToggleLineNumbers => self.editor.toggle_line_numbers(),
         }
     }

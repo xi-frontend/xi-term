@@ -292,6 +292,18 @@ impl Editor {
         }
     }
 
+    pub fn home(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.home();
+        }
+    }
+
+    pub fn end(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            view.end();
+        }
+    }
+
     pub fn toggle_line_numbers(&mut self) {
         if let Some(view) = self.views.get_mut(&self.current_view) {
             view.toggle_line_numbers();

@@ -126,6 +126,14 @@ impl View {
         self.client.down()
     }
 
+    pub fn home(&mut self) {
+        self.client.home()
+    }
+
+    pub fn end(&mut self) {
+        self.client.end()
+    }
+
     pub fn toggle_line_numbers(&mut self) {
         self.cfg.display_gutter = !self.cfg.display_gutter;
     }
