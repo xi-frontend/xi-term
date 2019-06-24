@@ -7,6 +7,7 @@ use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 use termion::event::{Event, Key, MouseButton, MouseEvent};
 use xrl::{ConfigChanges, Line, LineCache, Style, Update};
+use core::KeybindingConfig;
 
 use super::cfg::ViewConfig;
 use super::client::Client;
@@ -26,10 +27,11 @@ pub struct View {
     file: Option<String>,
     client: Client,
     cfg: ViewConfig,
+    keymap: KeybindingConfig
 }
 
 impl View {
-    pub fn new(client: Client, file: Option<String>) -> View {
+    pub fn new(client: Client, file: Option<String>, keymap: KeybindingConfig) -> View {
         View {
             cache: LineCache::default(),
             cursor: Default::default(),
@@ -37,6 +39,7 @@ impl View {
             cfg: ViewConfig::default(),
             client,
             file,
+            keymap,
         }
     }
 

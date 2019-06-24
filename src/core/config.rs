@@ -10,6 +10,8 @@ use std::collections::HashMap;
 
 use std::str::FromStr;
 
+pub type Keymap = HashMap<Event, Command>;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Keybinding {
     keys: Vec<String>,
@@ -19,8 +21,9 @@ struct Keybinding {
     context: Option<Value>,
 }
 
+#[derive(Clone)]
 pub struct KeybindingConfig {
-	pub keymap: HashMap<Event, Command>,
+	pub keymap: Keymap,
 	pub config_path: PathBuf
 }
 
@@ -31,7 +34,7 @@ impl KeybindingConfig {
 	    let bindings: Vec<Keybinding> = json5::from_str(&entries)?;
     	error!("Bindings parsed!");
 
-    	let mut keymap = HashMap::new();
+    	let mut keymap = Keymap::new();
     	let mut found_cmds = Vec::new();
     	for binding in bindings {
     		let cmd = match Command::from_str(&binding.command) {

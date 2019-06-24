@@ -43,7 +43,7 @@ impl Tui {
             terminal: Terminal::new()?,
             exit: false,
             term_size: (0, 0),
-            editor: Editor::new(client),
+            editor: Editor::new(client, keybindings.clone()),
             prompt: None,
             core_events: events,
             keybindings: keybindings,

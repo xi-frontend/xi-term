@@ -9,9 +9,8 @@ use indexmap::IndexMap;
 use termion::event::Event as TermionEvent;
 use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
-use core::CoreEvent;
+use core::{CoreEvent, KeybindingConfig};
 use widgets::{View, ViewClient};
-
 /// The main interface to xi-core
 pub struct Editor {
     /// Channel from which the responses to "new_view" requests are
@@ -44,11 +43,13 @@ pub struct Editor {
 
     pub size: (u16, u16),
     pub styles: HashMap<u64, Style>,
+
+    pub keymap: KeybindingConfig
 }
 
 /// Methods for general use.
 impl Editor {
-    pub fn new(client: Client) -> Editor {
+    pub fn new(client: Client, keymap: KeybindingConfig) -> Editor {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
         let (new_view_tx, new_view_rx) = mpsc::unbounded::<(ViewId, Option<String>)>();
@@ -62,6 +63,7 @@ impl Editor {
             client,
             size: (0, 0),
             styles,
+            keymap,
         }
     }
 }
@@ -92,7 +94,7 @@ impl Future for Editor {
                 Ok(Async::Ready(Some((view_id, file_path)))) => {
                     info!("creating new view {:?}", view_id);
                     let client = ViewClient::new(self.client.clone(), view_id);
-                    let mut view = View::new(client, file_path);
+                    let mut view = View::new(client, file_path, self.keymap.clone());
                     view.resize(self.size.1);
                     self.views.insert(view_id, view);
                     info!("switching to view {:?}", view_id);
