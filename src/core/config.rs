@@ -28,7 +28,7 @@ pub struct KeybindingConfig {
 }
 
 impl KeybindingConfig {
-    pub fn parse(config_path: &Path) -> Result<KeybindingConfig, Box<std::error::Error + Sync + Send + 'static>> {
+    pub fn parse(config_path: &Path) -> Result<KeybindingConfig, Box<dyn std::error::Error + Sync + Send + 'static>> {
         let entries = fs::read_to_string(config_path)?;
         // Read the JSON contents of the file as an instance of `User`.
         let bindings: Vec<Keybinding> = json5::from_str(&entries)?;

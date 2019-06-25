@@ -5,22 +5,12 @@
 #[macro_use]
 extern crate clap;
 
-extern crate failure;
-
 #[macro_use]
 extern crate log;
-extern crate log4rs;
 
-extern crate futures;
-extern crate indexmap;
-extern crate termion;
-extern crate tokio;
-extern crate xdg;
-extern crate xrl;
-
-extern crate json5;
-extern crate serde;
-extern crate serde_json;
+use log4rs;
+use tokio;
+use xrl;
 
 mod core;
 mod widgets;
