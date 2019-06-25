@@ -54,11 +54,11 @@ impl KeybindingConfig {
                           Err(_) => continue,
                 }
             };
-            error!("{:?} = {:?}", cmd, binding.keys);
             if found_cmds.contains(&cmd) {
                 continue;
             }
             if let Some(binding) = KeybindingConfig::parse_keys(&binding.keys) {
+                error!("{:?} = {:?}", cmd, binding);
                 keymap.insert(binding, cmd.clone());
                 found_cmds.push(cmd);
             } else {

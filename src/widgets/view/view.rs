@@ -5,9 +5,8 @@ use std::io::Write;
 use failure::Error;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
-use termion::event::{Event, Key, MouseButton, MouseEvent};
+use termion::event::{MouseButton, MouseEvent};
 use xrl::{ConfigChanges, Line, LineCache, Style, Update};
-use core::KeybindingConfig;
 
 use super::cfg::ViewConfig;
 use super::client::Client;
@@ -27,11 +26,10 @@ pub struct View {
     file: Option<String>,
     client: Client,
     cfg: ViewConfig,
-    keymap: KeybindingConfig
 }
 
 impl View {
-    pub fn new(client: Client, file: Option<String>, keymap: KeybindingConfig) -> View {
+    pub fn new(client: Client, file: Option<String>) -> View {
         View {
             cache: LineCache::default(),
             cursor: Default::default(),
@@ -39,7 +37,6 @@ impl View {
             cfg: ViewConfig::default(),
             client,
             file,
-            keymap,
         }
     }
 
@@ -198,42 +195,16 @@ impl View {
         self.client.drag(line, column);
     }
 
-    pub fn handle_input(&mut self, event: Event) {
-        match event {
-            Event::Key(key) => match key {
-                Key::Char(c) => match c {
-                    '\n' => self.insert_newline(),
-                    '\t' => self.insert_tab(),
-                    _ => self.insert(c),
-                },
-                Key::Ctrl(c) => match c {
-                    'w' => self.save(),
-                    'h' => self.back(),
-                    _ => error!("un-handled input ctrl+{}", c),
-                },
-                Key::Backspace => self.back(),
-                Key::Delete => self.delete(),
-                Key::Left => self.client.left(),
-                Key::Right => self.client.right(),
-                Key::Up => self.client.up(),
-                Key::Down => self.client.down(),
-                Key::Home => self.client.home(),
-                Key::End => self.client.end(),
-                Key::PageUp => self.page_up(),
-                Key::PageDown => self.page_down(),
-                k => error!("un-handled key {:?}", k),
+    pub fn handle_mouse_event(&mut self, mouse_event: MouseEvent) {
+        match mouse_event {
+            MouseEvent::Press(press_event, y, x) => match press_event {
+                MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
+                MouseButton::WheelUp => self.client.up(),
+                MouseButton::WheelDown => self.client.down(),
+                button => error!("un-handled button {:?}", button),
             },
-            Event::Mouse(mouse_event) => match mouse_event {
-                MouseEvent::Press(press_event, y, x) => match press_event {
-                    MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
-                    MouseButton::WheelUp => self.client.up(),
-                    MouseButton::WheelDown => self.client.down(),
-                    button => error!("un-handled button {:?}", button),
-                },
-                MouseEvent::Release(..) => {}
-                MouseEvent::Hold(y, x) => self.drag(u64::from(x) - 1, u64::from(y) - 1),
-            },
-            ev => error!("un-handled event {:?}", ev),
+            MouseEvent::Release(..) => {}
+            MouseEvent::Hold(y, x) => self.drag(u64::from(x) - 1, u64::from(y) - 1),
         }
     }
 

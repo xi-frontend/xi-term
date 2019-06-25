@@ -10,7 +10,6 @@ use xrl::{Client, Frontend, FrontendBuilder, MeasureWidth, XiNotification};
 use failure::Error;
 
 use core::{Command, Terminal, TerminalEvent, KeybindingConfig};
-use core::{AbsoluteMovePoint, RelativeMoveDistance};
 use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
@@ -33,8 +32,6 @@ pub struct Tui {
 
     /// Stream of messages from Xi core.
     core_events: UnboundedReceiver<CoreEvent>,
-
-    keybindings: KeybindingConfig,
 }
 
 impl Tui {
@@ -44,10 +41,9 @@ impl Tui {
             terminal: Terminal::new()?,
             exit: false,
             term_size: (0, 0),
-            editor: Editor::new(client, keybindings.clone()),
+            editor: Editor::new(client, keybindings),
             prompt: None,
             core_events: events,
-            keybindings: keybindings,
         })
     }
 
@@ -58,50 +54,12 @@ impl Tui {
 
     pub fn run_command(&mut self, cmd: Command) {
         match cmd {
+            // We handle these here, the rest is the job of the editor
             Command::OpenPrompt => self.open_prompt(),
             Command::Cancel => self.prompt = None,
             Command::Quit => self.exit = true,
-            Command::Save(view) => self.editor.save(view),
-            Command::Back => self.editor.back(),
-            Command::Delete => self.editor.delete(),
-            Command::Open(file) => self.editor.new_view(file),
-            Command::SetTheme(theme) => self.editor.set_theme(&theme),
-            Command::NextBuffer => self.editor.next_buffer(),
-            Command::PrevBuffer => self.editor.prev_buffer(),
-            Command::RelativeMove(x) => {
-                match x.by {
-                    RelativeMoveDistance::characters => {
-                        if x.forward {
-                            self.editor.move_right()
-                        } else {
-                            self.editor.move_left()
-                        }
-                    },
-                    RelativeMoveDistance::pages => {
-                        if x.forward {
-                            self.editor.page_down()
-                        } else {
-                            self.editor.page_up()
-                        }
-                    },
-                    RelativeMoveDistance::lines => {
-                        if x.forward {
-                            self.editor.move_down()
-                        } else {
-                            self.editor.move_up()
-                        }
-                    },
-                    _ => unimplemented!()
-                }
-            }
-            Command::AbsoluteMove(x) => {
-                match x.to {
-                    AbsoluteMovePoint::bol => self.editor.home(),
-                    AbsoluteMovePoint::eol => self.editor.end(),
-                    _ => unimplemented!()
-                }
-            }
-            Command::ToggleLineNumbers => self.editor.toggle_line_numbers(),
+
+            editor_cmd => self.editor.handle_command(editor_cmd)
         }
     }
 
@@ -114,8 +72,8 @@ impl Tui {
     /// Global keybindings can be parsed here
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
-
-        if let Some(cmd) = self.keybindings.keymap.get(&event) {
+        // TODO: Translate here to own enum which supports more event-types
+        if let Some(cmd) = self.editor.keybindings.keymap.get(&event) {
             match cmd {
                 Command::OpenPrompt => {
                                         if self.prompt.is_none() {

@@ -87,10 +87,8 @@
 	{ "keys": ["ctrl+up"], "command": "scroll_lines", "args": {"amount": 1.0 } },
 	{ "keys": ["ctrl+down"], "command": "scroll_lines", "args": {"amount": -1.0 } },
 
-	{ "keys": ["pagedown"], "command": "next_view" },
-	{ "keys": ["pageup"], "command": "prev_view" },
-	// { "keys": ["ctrl+pagedown"], "command": "next_view" },
-	// { "keys": ["ctrl+pageup"], "command": "prev_view" },
+	{ "keys": ["ctrl+pagedown"], "command": "next_view" },
+	{ "keys": ["ctrl+pageup"], "command": "prev_view" },
 
 	{ "keys": ["ctrl+tab"], "command": "next_view_in_stack" },
 	{ "keys": ["ctrl+shift+tab"], "command": "prev_view_in_stack" },

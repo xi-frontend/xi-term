@@ -6,10 +6,12 @@ use futures::{Async, Future, Poll, Stream};
 
 use failure::Error;
 use indexmap::IndexMap;
-use termion::event::Event as TermionEvent;
+use termion::event::{Event, Key};
+
 use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
-use core::{CoreEvent, KeybindingConfig};
+use core::{Command, CoreEvent, KeybindingConfig};
+use core::{AbsoluteMovePoint, RelativeMoveDistance};
 use widgets::{View, ViewClient};
 /// The main interface to xi-core
 pub struct Editor {
@@ -44,12 +46,12 @@ pub struct Editor {
     pub size: (u16, u16),
     pub styles: HashMap<u64, Style>,
 
-    pub keymap: KeybindingConfig
+    pub keybindings: KeybindingConfig
 }
 
 /// Methods for general use.
 impl Editor {
-    pub fn new(client: Client, keymap: KeybindingConfig) -> Editor {
+    pub fn new(client: Client, keybindings: KeybindingConfig) -> Editor {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
         let (new_view_tx, new_view_rx) = mpsc::unbounded::<(ViewId, Option<String>)>();
@@ -63,7 +65,7 @@ impl Editor {
             client,
             size: (0, 0),
             styles,
-            keymap,
+            keybindings,
         }
     }
 }
@@ -94,7 +96,7 @@ impl Future for Editor {
                 Ok(Async::Ready(Some((view_id, file_path)))) => {
                     info!("creating new view {:?}", view_id);
                     let client = ViewClient::new(self.client.clone(), view_id);
-                    let mut view = View::new(client, file_path, self.keymap.clone());
+                    let mut view = View::new(client, file_path);
                     view.resize(self.size.1);
                     self.views.insert(view_id, view);
                     info!("switching to view {:?}", view_id);
@@ -107,7 +109,7 @@ impl Future for Editor {
                     break;
                 }
                 Err(e) => {
-                    error!("Uknown channel error: {:?}", e);
+                    error!("Unkown channel error: {:?}", e);
                     return Err(());
                 }
             }
@@ -118,9 +120,77 @@ impl Future for Editor {
 
 impl Editor {
     /// Handle keyboard and mouse events
-    pub fn handle_input(&mut self, event: TermionEvent) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.handle_input(event)
+    pub fn handle_input(&mut self, event: Event) {
+        // We have to remove and insert again, to beat the borrow-checker
+        match event {
+            Event::Key(key) => {
+                match self.keybindings.keymap.get(&event).cloned() {
+                    Some(cmd) => self.handle_command(cmd),
+                    None => { 
+                        if let Some(view) = self.views.get_mut(&self.current_view) {
+                            match key {
+                                Key::Char(c) => match c {
+                                    '\n' => view.insert_newline(),
+                                    '\t' => view.insert_tab(),
+                                    _ => view.insert(c),
+                                },
+                                k => error!("un-handled key {:?}", k)
+                            }
+                        }
+                    },
+                }
+            },
+            Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),
+            ev => error!("un-handled event {:?}", ev),
+        }
+    }
+
+    pub fn handle_command(&mut self, cmd: Command) {
+        match cmd {
+            Command::Cancel => {/* Handled by TUI */}
+            Command::OpenPrompt => {/* Handled by TUI */}
+            Command::Quit => {/* Handled by TUI */}
+            Command::SetTheme(theme) => self.set_theme(&theme),
+            Command::NextBuffer => self.next_buffer(),
+            Command::PrevBuffer => self.prev_buffer(),
+            Command::Save(view_id) => self.save(view_id),
+            Command::Open(file) => self.new_view(file),
+            Command::Back => self.back(),
+            Command::Delete => self.delete(),
+            Command::RelativeMove(x) => {
+                match x.by {
+                    RelativeMoveDistance::characters => {
+                        if x.forward {
+                            self.move_right()
+                        } else {
+                            self.move_left()
+                        }
+                    },
+                    RelativeMoveDistance::pages => {
+                        if x.forward {
+                            self.page_down()
+                        } else {
+                            self.page_up()
+                        }
+                    },
+                    RelativeMoveDistance::lines => {
+                        if x.forward {
+                            self.move_down()
+                        } else {
+                            self.move_up()
+                        }
+                    },
+                    _ => unimplemented!()
+                }
+            }
+            Command::AbsoluteMove(x) => {
+                match x.to {
+                    AbsoluteMovePoint::bol => self.home(),
+                    AbsoluteMovePoint::eol => self.end(),
+                    _ => unimplemented!()
+                }
+            }
+            Command::ToggleLineNumbers => self.toggle_line_numbers(),
         }
     }
 
