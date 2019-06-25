@@ -4,6 +4,7 @@
 *.err
 *.orig
 *.log
+*.log.rpc
 *.rej
 *.swo
 *.swp

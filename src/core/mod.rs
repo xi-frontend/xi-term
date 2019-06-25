@@ -5,4 +5,7 @@ mod tui;
 pub use self::tui::{CoreEvent, Tui, TuiService, TuiServiceBuilder};
 
 mod cmd;
-pub use self::cmd::{Command, ParseCommandError};
+pub use self::cmd::{Command, ParseCommandError, RelativeMove, AbsoluteMove, RelativeMoveDistance, AbsoluteMovePoint};
+
+mod config;
+pub use self::config::{KeybindingConfig, Keymap};
