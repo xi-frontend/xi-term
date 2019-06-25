@@ -10,9 +10,9 @@ use termion::event::{Event, Key};
 
 use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
-use core::{Command, CoreEvent, KeybindingConfig};
-use core::{AbsoluteMovePoint, RelativeMoveDistance};
-use widgets::{View, ViewClient};
+use crate::core::{Command, CoreEvent, KeybindingConfig};
+use crate::core::{AbsoluteMovePoint, RelativeMoveDistance};
+use crate::widgets::{View, ViewClient};
 /// The main interface to xi-core
 pub struct Editor {
     /// Channel from which the responses to "new_view" requests are

@@ -9,8 +9,8 @@ use xrl::{Client, Frontend, FrontendBuilder, MeasureWidth, XiNotification};
 
 use failure::Error;
 
-use core::{Command, Terminal, TerminalEvent, KeybindingConfig};
-use widgets::{CommandPrompt, Editor};
+use crate::core::{Command, Terminal, TerminalEvent, KeybindingConfig};
+use crate::widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
     /// The editor holds the text buffers (named "views" in xi

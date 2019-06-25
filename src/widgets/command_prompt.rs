@@ -6,7 +6,7 @@ use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
 
-use core::{Command, ParseCommandError};
+use crate::core::{Command, ParseCommandError};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 

@@ -33,7 +33,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
 
-use core::{Command, Tui, TuiServiceBuilder, KeybindingConfig};
+use crate::core::{Command, Tui, TuiServiceBuilder, KeybindingConfig};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();
