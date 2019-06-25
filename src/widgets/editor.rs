@@ -185,8 +185,8 @@ impl Editor {
             }
             Command::AbsoluteMove(x) => {
                 match x.to {
-                    AbsoluteMovePoint::bol => self.home(),
-                    AbsoluteMovePoint::eol => self.end(),
+                    AbsoluteMovePoint::bol => self.move_bol(),
+                    AbsoluteMovePoint::eol => self.move_eol(),
                     _ => unimplemented!()
                 }
             }
@@ -362,13 +362,13 @@ impl Editor {
         }
     }
 
-    pub fn home(&mut self) {
+    pub fn move_bol(&mut self) {
         if let Some(view) = self.views.get_mut(&self.current_view) {
             view.home();
         }
     }
 
-    pub fn end(&mut self) {
+    pub fn move_eol(&mut self) {
         if let Some(view) = self.views.get_mut(&self.current_view) {
             view.end();
         }
