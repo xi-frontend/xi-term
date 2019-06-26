@@ -129,15 +129,11 @@ impl Editor {
                     None => { 
                         if let Some(view) = self.views.get_mut(&self.current_view) {
                             match key {
-                                Key::Char(c) => match c {
-                                    '\n' => view.insert_newline(),
-                                    '\t' => view.insert_tab(),
-                                    _ => view.insert(c),
-                                },
+                                Key::Char(c) => view.handle_command(Command::Insert(c)),
                                 k => error!("un-handled key {:?}", k)
                             }
                         }
-                    },
+                    }
                 }
             },
             Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),

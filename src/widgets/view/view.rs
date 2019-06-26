@@ -77,18 +77,6 @@ impl View {
         self.client.scroll(top, bottom);
     }
 
-    pub fn insert(&mut self, c: char) {
-        self.client.insert(c)
-    }
-
-    pub fn insert_newline(&mut self) {
-        self.client.insert_newline()
-    }
-
-    pub fn insert_tab(&mut self) {
-        self.client.insert_tab()
-    }
-
     pub fn save(&mut self) {
         self.client.save(self.file.as_ref().unwrap())
     }

@@ -29,7 +29,10 @@ impl Client {
             Command::Open(_file) => { /* Handled by Editor */ },
             Command::ToggleLineNumbers => { /* Handled by View */ },
             Command::Back => self.back(),
-            Command::Delete => self.delete(),
+            Command::Delete => self.delete(),    
+            Command::Insert('\n') => self.insert_newline(),
+            Command::Insert('\t') => self.insert_tab(),
+            Command::Insert(c)    => self.insert(c),
             Command::RelativeMove(x) => {
                 match x.by {
                     RelativeMoveDistance::characters => {

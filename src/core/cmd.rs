@@ -87,6 +87,8 @@ pub enum Command {
     ToggleLineNumbers,
     /// Open prompt for user-input
     OpenPrompt,
+    /// Insert a character
+    Insert(char),
 }
 
 #[derive(Debug)]
