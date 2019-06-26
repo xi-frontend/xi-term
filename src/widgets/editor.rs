@@ -11,7 +11,7 @@ use termion::event::{Event, Key};
 use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
 use crate::core::{Command, CoreEvent, KeybindingConfig};
-use crate::core::{AbsoluteMovePoint, RelativeMoveDistance};
+
 use crate::widgets::{View, ViewClient};
 /// The main interface to xi-core
 pub struct Editor {
@@ -147,50 +147,17 @@ impl Editor {
 
     pub fn handle_command(&mut self, cmd: Command) {
         match cmd {
-            Command::Cancel => {/* Handled by TUI */}
-            Command::OpenPrompt => {/* Handled by TUI */}
-            Command::Quit => {/* Handled by TUI */}
             Command::SetTheme(theme) => self.set_theme(&theme),
             Command::NextBuffer => self.next_buffer(),
             Command::PrevBuffer => self.prev_buffer(),
             Command::Save(view_id) => self.save(view_id),
             Command::Open(file) => self.new_view(file),
-            Command::Back => self.back(),
-            Command::Delete => self.delete(),
-            Command::RelativeMove(x) => {
-                match x.by {
-                    RelativeMoveDistance::characters => {
-                        if x.forward {
-                            self.move_right()
-                        } else {
-                            self.move_left()
+
+            view_command => {
+                        if let Some(view) = self.views.get_mut(&self.current_view) {
+                            view.handle_command(view_command)
                         }
-                    },
-                    RelativeMoveDistance::pages => {
-                        if x.forward {
-                            self.page_down()
-                        } else {
-                            self.page_up()
-                        }
-                    },
-                    RelativeMoveDistance::lines => {
-                        if x.forward {
-                            self.move_down()
-                        } else {
-                            self.move_up()
-                        }
-                    },
-                    _ => unimplemented!()
-                }
             }
-            Command::AbsoluteMove(x) => {
-                match x.to {
-                    AbsoluteMovePoint::bol => self.move_bol(),
-                    AbsoluteMovePoint::eol => self.move_eol(),
-                    _ => unimplemented!()
-                }
-            }
-            Command::ToggleLineNumbers => self.toggle_line_numbers(),
         }
     }
 
@@ -290,18 +257,6 @@ impl Editor {
         }
     }
 
-    pub fn back(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.back();
-        }
-    }
-
-    pub fn delete(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.delete();
-        }
-    }
-
     pub fn next_buffer(&mut self) {
         if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
             if dex + 1 == self.views.len() {
@@ -323,60 +278,6 @@ impl Editor {
             } else if let Some((view, _)) = self.views.get_index(dex - 1) {
                 self.current_view = *view;
             }
-        }
-    }
-
-    pub fn move_left(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_left();
-        }
-    }
-
-    pub fn move_right(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_right();
-        }
-    }
-
-    pub fn move_up(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_up();
-        }
-    }
-
-    pub fn move_down(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_down();
-        }
-    }
-
-    pub fn page_down(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.page_down();
-        }
-    }
-
-    pub fn page_up(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.page_up();
-        }
-    }
-
-    pub fn move_bol(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.home();
-        }
-    }
-
-    pub fn move_eol(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.end();
-        }
-    }
-
-    pub fn toggle_line_numbers(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.toggle_line_numbers();
         }
     }
 }

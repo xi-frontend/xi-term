@@ -8,6 +8,8 @@ use termion::cursor::Goto;
 use termion::event::{MouseButton, MouseEvent};
 use xrl::{ConfigChanges, Line, LineCache, Style, Update};
 
+use crate::core::Command;
+
 use super::cfg::ViewConfig;
 use super::client::Client;
 use super::style::{reset_style, set_style};
@@ -91,46 +93,6 @@ impl View {
         self.client.save(self.file.as_ref().unwrap())
     }
 
-    pub fn back(&mut self) {
-        self.client.backspace()
-    }
-
-    pub fn delete(&mut self) {
-        self.client.delete()
-    }
-
-    pub fn page_down(&mut self) {
-        self.client.page_down()
-    }
-
-    pub fn page_up(&mut self) {
-        self.client.page_up()
-    }
-
-    pub fn move_left(&mut self) {
-        self.client.left()
-    }
-
-    pub fn move_right(&mut self) {
-        self.client.right()
-    }
-
-    pub fn move_up(&mut self) {
-        self.client.up()
-    }
-
-    pub fn move_down(&mut self) {
-        self.client.down()
-    }
-
-    pub fn home(&mut self) {
-        self.client.home()
-    }
-
-    pub fn end(&mut self) {
-        self.client.end()
-    }
-
     pub fn toggle_line_numbers(&mut self) {
         self.cfg.display_gutter = !self.cfg.display_gutter;
     }
@@ -193,6 +155,13 @@ impl View {
     fn drag(&mut self, x: u64, y: u64) {
         let (line, column) = self.get_click_location(x, y);
         self.client.drag(line, column);
+    }
+
+    pub fn handle_command(&mut self, cmd: Command) {
+        match cmd {
+            Command::ToggleLineNumbers => self.toggle_line_numbers(),
+            client_command => self.client.handle_command(client_command),
+        }
     }
 
     pub fn handle_mouse_event(&mut self, mouse_event: MouseEvent) {

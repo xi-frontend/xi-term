@@ -2,6 +2,8 @@ use futures::Future;
 use tokio::spawn;
 use xrl;
 
+use crate::core::{Command, RelativeMoveDistance, AbsoluteMovePoint};
+
 pub struct Client {
     inner: xrl::Client,
     view_id: xrl::ViewId,
@@ -12,6 +14,55 @@ impl Client {
         Client {
             inner: client,
             view_id,
+        }
+    }
+
+    pub fn handle_command(&mut self, cmd: Command) {
+        match cmd {
+            Command::Cancel => {/* Handled by TUI */}
+            Command::OpenPrompt => {/* Handled by TUI */}
+            Command::Quit => {/* Handled by TUI */}
+            Command::SetTheme(_theme) => { /* Handled by Editor */ },
+            Command::NextBuffer => { /* Handled by Editor */ },
+            Command::PrevBuffer => { /* Handled by Editor */ },
+            Command::Save(_view_id) => { /* Handled by Editor */ },
+            Command::Open(_file) => { /* Handled by Editor */ },
+            Command::ToggleLineNumbers => { /* Handled by View */ },
+            Command::Back => self.back(),
+            Command::Delete => self.delete(),
+            Command::RelativeMove(x) => {
+                match x.by {
+                    RelativeMoveDistance::characters => {
+                        if x.forward {
+                            self.right()
+                        } else {
+                            self.left()
+                        }
+                    },
+                    RelativeMoveDistance::pages => {
+                        if x.forward {
+                            self.page_down()
+                        } else {
+                            self.page_up()
+                        }
+                    },
+                    RelativeMoveDistance::lines => {
+                        if x.forward {
+                            self.down()
+                        } else {
+                            self.up()
+                        }
+                    },
+                    _ => unimplemented!()
+                }
+            }
+            Command::AbsoluteMove(x) => {
+                match x.to {
+                    AbsoluteMovePoint::bol => self.line_start(),
+                    AbsoluteMovePoint::eol => self.line_end(),
+                    _ => unimplemented!()
+                }
+            }
         }
     }
 
@@ -65,12 +116,12 @@ impl Client {
         spawn(f);
     }
 
-    pub fn home(&mut self) {
+    pub fn line_start(&mut self) {
         let f = self.inner.line_start(self.view_id).map_err(|_| ());
         spawn(f);
     }
 
-    pub fn end(&mut self) {
+    pub fn line_end(&mut self) {
         let f = self.inner.line_end(self.view_id).map_err(|_| ());
         spawn(f);
     }
@@ -80,7 +131,7 @@ impl Client {
         spawn(f);
     }
 
-    pub fn backspace(&mut self) {
+    pub fn back(&mut self) {
         let f = self.inner.backspace(self.view_id).map_err(|_| ());
         spawn(f);
     }
