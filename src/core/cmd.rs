@@ -116,6 +116,7 @@ impl FromStr for Command {
 
     fn from_str(s: &str) -> Result<Command, Self::Err> {
         match &s[..] {
+            "hide_overlay" => Ok(Command::Cancel),
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" | "exit" => Ok(Command::Quit),
             "b" | "back" | "left_delete" => Ok(Command::Back),

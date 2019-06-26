@@ -73,7 +73,7 @@ impl Tui {
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
         // TODO: Translate here to own enum which supports more event-types
-        if let Some(cmd) = self.editor.keybindings.keymap.get(&event) {
+        if let Some(cmd) = self.editor.keybindings.keymap.get_mut(&event) {
             match cmd {
                 Command::OpenPrompt => {
                                         if self.prompt.is_none() {
@@ -81,6 +81,7 @@ impl Tui {
                                         }
                                         return; },
                 Command::Quit => { self.exit = true; return; },
+                Command::Cancel => { self.prompt = None; return; },
                 _ => {/* Somebody else has to deal with these commands */},
             }
         }
