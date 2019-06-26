@@ -89,6 +89,10 @@ pub enum Command {
     OpenPrompt,
     /// Insert a character
     Insert(char),
+    // Undo last action
+    Undo,
+    // Redo last undone action
+    Redo
 }
 
 #[derive(Debug)]
@@ -123,6 +127,8 @@ impl FromStr for Command {
             "d" | "delete" | "right_delete" => Ok(Command::Delete),
             "bn" | "next-buffer" | "next_view" => Ok(Command::NextBuffer),
             "bp" | "prev-buffer" | "prev_view" => Ok(Command::PrevBuffer),
+            "undo" => Ok(Command::Undo),
+            "redo" => Ok(Command::Redo),
             "md" | "move-down" => Ok(Command::RelativeMove(
                                                     RelativeMove{
                                                                 by: RelativeMoveDistance::lines, 

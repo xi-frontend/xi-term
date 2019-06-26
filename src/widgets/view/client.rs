@@ -33,6 +33,8 @@ impl Client {
             Command::Insert('\n') => self.insert_newline(),
             Command::Insert('\t') => self.insert_tab(),
             Command::Insert(c)    => self.insert(c),
+            Command::Undo => self.undo(),
+            Command::Redo => self.redo(),
             Command::RelativeMove(x) => {
                 match x.by {
                     RelativeMoveDistance::characters => {
@@ -67,6 +69,16 @@ impl Client {
                 }
             }
         }
+    }
+
+    pub fn undo(&mut self) {
+        let f = self.inner.undo(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn redo(&mut self) {
+        let f = self.inner.redo(self.view_id).map_err(|_| ());
+        spawn(f);
     }
 
     pub fn insert(&mut self, character: char) {
