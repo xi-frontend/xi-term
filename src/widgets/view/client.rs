@@ -1,6 +1,7 @@
 use futures::Future;
 use tokio::spawn;
 use xrl;
+use serde_json::Value;
 
 use crate::core::{Command, RelativeMoveDistance, AbsoluteMovePoint};
 
@@ -28,6 +29,7 @@ impl Client {
             Command::Save(_view_id) => { /* Handled by Editor */ },
             Command::Open(_file) => { /* Handled by Editor */ },
             Command::ToggleLineNumbers => { /* Handled by View */ },
+            Command::FindUnderExpand => { /* Handled by View */ },
             Command::Back => self.back(),
             Command::Delete => self.delete(),    
             Command::Insert('\n') => self.insert_newline(),
@@ -35,13 +37,21 @@ impl Client {
             Command::Insert(c)    => self.insert(c),
             Command::Undo => self.undo(),
             Command::Redo => self.redo(),
+            Command::CursorExpandLines(dir) => self.cursor_expand_line(dir.forward),
             Command::RelativeMove(x) => {
                 match x.by {
                     RelativeMoveDistance::characters => {
                         if x.forward {
-                            self.right()
+                            self.right(x.extend)
                         } else {
-                            self.left()
+                            self.left(x.extend)
+                        }
+                    },
+                    RelativeMoveDistance::words | RelativeMoveDistance::word_ends => {
+                        if x.forward {
+                            self.word_right(x.extend)
+                        } else {
+                            self.word_left(x.extend)
                         }
                     },
                     RelativeMoveDistance::pages => {
@@ -69,6 +79,19 @@ impl Client {
                 }
             }
         }
+    }
+
+    pub fn find_under_expand_next(&mut self) {
+        let f = self.inner
+                    .find_next(self.view_id, true, false, xrl::ModifySelection::Add)
+                    .map_err(|_| ());
+        spawn(f);        
+    }
+
+    pub fn find_under_expand(&mut self) {
+        let f = self.inner.edit_notify(self.view_id, "selection_for_find", Some(json!({"case_sensitive": true})))
+                    .map_err(|_| ());
+        spawn(f);
     }
 
     pub fn undo(&mut self) {
@@ -111,14 +134,44 @@ impl Client {
         spawn(f);
     }
 
-    pub fn right(&mut self) {
-        let f = self.inner.right(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn right(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.right_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {
+            let f = self.inner.right(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
-    pub fn left(&mut self) {
-        let f = self.inner.left(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn left(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.left_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {
+            let f = self.inner.left(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
+    }
+
+    pub fn word_right(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.move_word_right_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {
+            let f = self.inner.move_word_right(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
+    }
+
+    pub fn word_left(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.move_word_left_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {
+            let f = self.inner.move_word_left(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
     pub fn page_down(&mut self) {
@@ -166,6 +219,18 @@ impl Client {
 
     pub fn drag(&mut self, line: u64, column: u64) {
         let f = self.inner.drag(self.view_id, line, column).map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn collapse_selections(&mut self) {
+        let f = self.inner.collapse_selections(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn cursor_expand_line(&mut self, forward: bool) {
+        let command = if forward { "add_selection_below" } else { "add_selection_above" };
+        let f = self.inner.edit_notify(self.view_id, command, None as Option<Value>)
+                    .map_err(|_| ());
         spawn(f);
     }
 }

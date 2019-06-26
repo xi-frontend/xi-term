@@ -31,9 +31,9 @@
 	{ "keys": ["ctrl+u"], "command": "soft_undo" },
 	{ "keys": ["ctrl+shift+u"], "command": "soft_redo" },
 
-	{ "keys": ["shift+delete"], "command": "cut" },
-	{ "keys": ["ctrl+insert"], "command": "copy" },
-	{ "keys": ["shift+insert"], "command": "paste" },
+	//{ "keys": ["shift+delete"], "command": "cut" },
+	//{ "keys": ["ctrl+insert"], "command": "copy" },
+	//{ "keys": ["shift+insert"], "command": "paste" },
 
 	// These two key bindings should replace the above three if you'd prefer
 	// the traditional X11 behavior of shift+insert pasting from the primary

@@ -28,6 +28,8 @@ pub struct View {
     file: Option<String>,
     client: Client,
     cfg: ViewConfig,
+
+    search_in_progress: bool
 }
 
 impl View {
@@ -39,6 +41,7 @@ impl View {
             cfg: ViewConfig::default(),
             client,
             file,
+            search_in_progress: false
         }
     }
 
@@ -145,9 +148,20 @@ impl View {
         self.client.drag(line, column);
     }
 
+    fn find_under_expand(&mut self) {
+        if self.search_in_progress {
+            self.client.find_under_expand_next()
+        } else {
+            self.search_in_progress = true;
+            self.client.find_under_expand()
+        }
+    }
+
     pub fn handle_command(&mut self, cmd: Command) {
         match cmd {
             Command::ToggleLineNumbers => self.toggle_line_numbers(),
+            Command::FindUnderExpand => self.find_under_expand(),
+            Command::Cancel => { self.search_in_progress = false; self.client.collapse_selections() },
             client_command => self.client.handle_command(client_command),
         }
     }

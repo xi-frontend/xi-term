@@ -59,6 +59,12 @@ pub struct AbsoluteMove {
     pub extend: bool
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub struct ExpandLinesDirection {
+    pub forward: bool
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Command {
     /// Close the CommandPrompt.
@@ -89,10 +95,14 @@ pub enum Command {
     OpenPrompt,
     /// Insert a character
     Insert(char),
-    // Undo last action
+    /// Undo last action
     Undo,
-    // Redo last undone action
-    Redo
+    /// Redo last undone action
+    Redo,
+    /// Find word and set another cursor there
+    FindUnderExpand,
+    /// Set a new cursor below or above current position
+    CursorExpandLines(ExpandLinesDirection),
 }
 
 #[derive(Debug)]
@@ -120,6 +130,7 @@ impl FromStr for Command {
 
     fn from_str(s: &str) -> Result<Command, Self::Err> {
         match &s[..] {
+            "fue" | "find_under_expand" => Ok(Command::FindUnderExpand),
             "hide_overlay" => Ok(Command::Cancel),
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" | "exit" => Ok(Command::Quit),

@@ -123,21 +123,20 @@ impl Editor {
     pub fn handle_input(&mut self, event: Event) {
         // We have to remove and insert again, to beat the borrow-checker
         match event {
-            Event::Key(key) => {
-                match self.keybindings.keymap.get(&event).cloned() {
+            Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),            
+            ev => {
+                match self.keybindings.keymap.get(&ev).cloned() {
                     Some(cmd) => self.handle_command(cmd),
                     None => { 
                         if let Some(view) = self.views.get_mut(&self.current_view) {
-                            match key {
-                                Key::Char(c) => view.handle_command(Command::Insert(c)),
+                            match ev {
+                                Event::Key(Key::Char(c)) => view.handle_command(Command::Insert(c)),
                                 k => error!("un-handled key {:?}", k)
                             }
                         }
                     }
                 }
             },
-            Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),
-            ev => error!("un-handled event {:?}", ev),
         }
     }
 
@@ -148,7 +147,6 @@ impl Editor {
             Command::PrevBuffer => self.prev_buffer(),
             Command::Save(view_id) => self.save(view_id),
             Command::Open(file) => self.new_view(file),
-
             view_command => {
                         if let Some(view) = self.views.get_mut(&self.current_view) {
                             view.handle_command(view_command)

@@ -81,7 +81,7 @@ impl Tui {
                                         }
                                         return; },
                 Command::Quit => { self.exit = true; return; },
-                Command::Cancel => { self.prompt = None; return; },
+                Command::Cancel if !self.prompt.is_none() => { self.prompt = None; return; },
                 _ => {/* Somebody else has to deal with these commands */},
             }
         }

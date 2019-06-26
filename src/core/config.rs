@@ -1,4 +1,4 @@
-use crate::core::{Command, RelativeMove, AbsoluteMove};
+use crate::core::{Command, RelativeMove, AbsoluteMove, ExpandLinesDirection};
 use termion::event::{Event, Key};
 
 use serde::{Deserialize, Serialize};
@@ -48,6 +48,11 @@ impl KeybindingConfig {
                     let cmd : AbsoluteMove = serde_json::from_value(args)?;
                     Command::AbsoluteMove(cmd)
                 },
+                "select_lines" => {
+                    let args = binding.args.ok_or("select_lines binding incomplete! Missing \"args\"")?;
+                    let cmd : ExpandLinesDirection = serde_json::from_value(args)?;
+                    Command::CursorExpandLines(cmd)
+                }
                 x =>  match Command::from_str(x) {
                           Ok(cmd) => cmd,
                           // unimplemented command for now
@@ -62,7 +67,7 @@ impl KeybindingConfig {
                 keymap.insert(binding, cmd.clone());
                 found_cmds.push(cmd);
             } else {
-                warn!("Skipping failed binding");
+                // warn!("Skipping failed binding");
                 continue;
             }
         }
@@ -91,12 +96,22 @@ impl KeybindingConfig {
             "delete" => Some(Event::Key(Key::Delete)),
             "insert" => Some(Event::Key(Key::Insert)),
             "escape" => Some(Event::Key(Key::Esc)),
+            "ctrl+right" => Some(Event::Unsupported(vec![27, 91, 49, 59, 53, 67])),
+            "ctrl+left"  => Some(Event::Unsupported(vec![27, 91, 49, 59, 53, 68])),
+            "ctrl+shift+right" => Some(Event::Unsupported(vec![27, 91, 49, 59, 54, 67])),
+            "ctrl+shift+left"  => Some(Event::Unsupported(vec![27, 91, 49, 59, 54, 68])),
+            "ctrl+shift+up"    => Some(Event::Unsupported(vec![27, 91, 49, 59, 54, 65])),
+            "ctrl+shift+down"  => Some(Event::Unsupported(vec![27, 91, 49, 59, 54, 66])),
+            "alt+shift+up"   => Some(Event::Unsupported(vec![27, 91, 49, 59, 52, 65])),
+            "alt+shift+down" => Some(Event::Unsupported(vec![27, 91, 49, 59, 52, 66])),
+            // Not yet released
+            // "shift+tab" => Some(Event::Key(Key::Backtab)),
 
             x if x.starts_with("f") => {
                 match x[1..].parse::<u8>() {
                     Ok(val) => Some(Event::Key(Key::F(val))),
                     Err(_) => {
-                        warn!("Cannot parse {}", x);
+                        // warn!("Cannot parse {}", x);
                         None
                     }
                 }
@@ -109,7 +124,7 @@ impl KeybindingConfig {
                 let character;
                 // start_length + "shift+x".len() || start_length + "x".len()
                 if x.len() != start_length + 7 && x.len() != start_length + 1 {
-                    warn!("Cannot parse {}. Length is = {}, which is neither {} nor {} ", x, x.len(), start_length + 1, start_length + 7);
+                    // warn!("Cannot parse {}. Length is = {}, which is neither {} nor {} ", x, x.len(), start_length + 1, start_length + 7);
                     return None
                 } else {
                     if x.len() == start_length + 7 {
@@ -128,7 +143,7 @@ impl KeybindingConfig {
             }
             
             x => {
-                warn!("Completely unknown argument {}", x);
+                // warn!("Completely unknown argument {}", x);
                 None
             },
         }
