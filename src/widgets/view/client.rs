@@ -30,6 +30,9 @@ impl Client {
             Command::Open(_file) => { /* Handled by Editor */ },
             Command::ToggleLineNumbers => { /* Handled by View */ },
             Command::FindUnderExpand => { /* Handled by View */ },
+            Command::CopySelection => { /* Handled by View */ },
+            Command::CutSelection => { /* Handled by View */ },
+            Command::Paste => { /* Handled by View */ },
             Command::Back => self.back(),
             Command::Delete => self.delete(),    
             Command::Insert('\n') => self.insert_newline(),
@@ -91,6 +94,19 @@ impl Client {
     pub fn find_under_expand(&mut self) {
         let f = self.inner.edit_notify(self.view_id, "selection_for_find", Some(json!({"case_sensitive": true})))
                     .map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn copy(&mut self) -> impl Future<Item = Value, Error = xrl::ClientError> {
+        self.inner.copy(self.view_id)
+    }
+
+    pub fn cut(&mut self) -> impl Future<Item = Value, Error = xrl::ClientError> {
+        self.inner.cut(self.view_id)
+    }
+
+    pub fn paste(&mut self, content: &str) {
+        let f = self.inner.paste(self.view_id, content).map_err(|_| ());
         spawn(f);
     }
 

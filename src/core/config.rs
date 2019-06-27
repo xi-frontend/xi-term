@@ -142,7 +142,7 @@ impl KeybindingConfig {
                 }
             }
             
-            x => {
+            _ => {
                 // warn!("Completely unknown argument {}", x);
                 None
             },

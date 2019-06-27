@@ -103,6 +103,12 @@ pub enum Command {
     FindUnderExpand,
     /// Set a new cursor below or above current position
     CursorExpandLines(ExpandLinesDirection),
+    /// Copy the current selection
+    CopySelection,
+    /// Paste previously copied or cut text
+    Paste,
+    /// Copy the current selection
+    CutSelection,
 }
 
 #[derive(Debug)]
@@ -130,6 +136,9 @@ impl FromStr for Command {
 
     fn from_str(s: &str) -> Result<Command, Self::Err> {
         match &s[..] {
+            "copy" => Ok(Command::CopySelection),
+            "cut" => Ok(Command::CutSelection),
+            "paste" => Ok(Command::Paste),
             "fue" | "find_under_expand" => Ok(Command::FindUnderExpand),
             "hide_overlay" => Ok(Command::Cancel),
             "s" | "save" => Ok(Command::Save(None)),
