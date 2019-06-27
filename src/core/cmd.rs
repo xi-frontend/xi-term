@@ -312,7 +312,8 @@ impl FromPrompt for Command {
                 } else if parts.len() > 1 {
                     Err(ParseCommandError::UnexpectedArgument)
                 } else {
-                    Ok(Command::Open(Some(parts[0].to_owned())))
+                    let file = shellexpand::full(parts[0]).map_err(|_| ParseCommandError::UnknownCommand(parts[0].to_string()))?;
+                    Ok(Command::Open(Some(file.to_string())))
                 }
             }
 
