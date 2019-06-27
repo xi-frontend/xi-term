@@ -1,4 +1,4 @@
-use crate::core::{Command, RelativeMove, AbsoluteMove, ExpandLinesDirection};
+use crate::core::{Command, RelativeMove, AbsoluteMove, ExpandLinesDirection, DEFAULT_KEYBINDINGS};
 use termion::event::{Event, Key};
 
 use serde::{Deserialize, Serialize};
@@ -24,14 +24,14 @@ struct Keybinding {
 #[derive(Clone)]
 pub struct KeybindingConfig {
     pub keymap: Keymap,
-    pub config_path: PathBuf
+    // pub config_path: PathBuf
 }
 
 impl KeybindingConfig {
-    pub fn parse(config_path: &Path) -> Result<KeybindingConfig, Box<dyn std::error::Error + Sync + Send + 'static>> {
-        let entries = fs::read_to_string(config_path)?;
+    pub fn parse() -> Result<KeybindingConfig, Box<dyn std::error::Error + Sync + Send + 'static>> {
+        // let entries = fs::read_to_string(config_path)?;
         // Read the JSON contents of the file as an instance of `User`.
-        let bindings: Vec<Keybinding> = json5::from_str(&entries)?;
+        let bindings: Vec<Keybinding> = json5::from_str(&DEFAULT_KEYBINDINGS)?;
         error!("Bindings parsed!");
 
         let mut keymap = Keymap::new();
@@ -72,7 +72,8 @@ impl KeybindingConfig {
             }
         }
 
-        Ok(KeybindingConfig{keymap: keymap, config_path: config_path.to_owned()})
+        // Ok(KeybindingConfig{keymap: keymap, config_path: config_path.to_owned()})
+        Ok(KeybindingConfig{keymap})
     }
 
     fn parse_keys(keys: &Vec<String>) -> Option<Event> {

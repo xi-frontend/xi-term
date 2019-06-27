@@ -90,8 +90,9 @@ fn run() -> Result<(), Error> {
         configure_logs(logfile);
     }
 
-    let configfile = std::path::Path::new("./configs/Default (Linux).sublime-keymap").to_owned();
-    let keybindings = KeybindingConfig::parse(&configfile).map_err(Error::from_boxed_compat)?;
+    // let configfile = std::path::Path::new("./configs/Default (Linux).sublime-keymap").to_owned();
+    // let keybindings = KeybindingConfig::parse(&configfile).map_err(Error::from_boxed_compat)?;
+    let keybindings = KeybindingConfig::parse().map_err(Error::from_boxed_compat)?;
 
     tokio::run(future::lazy(move || {
         info!("starting xi-core");
@@ -127,7 +128,7 @@ fn run() -> Result<(), Error> {
                     tui.run_command(Command::Open(
                         matches.value_of("file").map(ToString::to_string),
                     ));
-                    tui.run_command(Command::SetTheme("base16-eighties.dark".into()));
+                    tui.run_command(Command::SetTheme("Solarized (dark)".into()));
                     tui.map_err(|e| error!("TUI exited with an error: {:?}", e))
                 })
         }));
