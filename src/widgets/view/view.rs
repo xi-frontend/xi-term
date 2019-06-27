@@ -218,8 +218,8 @@ impl View {
         match mouse_event {
             MouseEvent::Press(press_event, y, x) => match press_event {
                 MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
-                MouseButton::WheelUp => self.client.up(),
-                MouseButton::WheelDown => self.client.down(),
+                MouseButton::WheelUp => self.client.up(false),
+                MouseButton::WheelDown => self.client.down(false),
                 button => error!("un-handled button {:?}", button),
             },
             MouseEvent::Release(..) => {}

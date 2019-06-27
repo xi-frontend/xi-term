@@ -59,16 +59,16 @@ impl Client {
                     },
                     RelativeMoveDistance::pages => {
                         if x.forward {
-                            self.page_down()
+                            self.page_down(x.extend)
                         } else {
-                            self.page_up()
+                            self.page_up(x.extend)
                         }
                     },
                     RelativeMoveDistance::lines => {
                         if x.forward {
-                            self.down()
+                            self.down(x.extend)
                         } else {
-                            self.up()
+                            self.up(x.extend)
                         }
                     },
                     _ => unimplemented!()
@@ -76,8 +76,11 @@ impl Client {
             }
             Command::AbsoluteMove(x) => {
                 match x.to {
-                    AbsoluteMovePoint::bol => self.line_start(),
-                    AbsoluteMovePoint::eol => self.line_end(),
+                    AbsoluteMovePoint::bol => self.line_start(x.extend),
+                    AbsoluteMovePoint::eol => self.line_end(x.extend),
+                    AbsoluteMovePoint::bof => self.document_begin(x.extend),
+                    AbsoluteMovePoint::eof => self.document_end(x.extend),
+                    AbsoluteMovePoint::line(line) => self.goto_line(line),
                     _ => unimplemented!()
                 }
             }
@@ -140,14 +143,24 @@ impl Client {
         spawn(f);
     }
 
-    pub fn down(&mut self) {
-        let f = self.inner.down(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn down(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.down_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.down(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
-    pub fn up(&mut self) {
-        let f = self.inner.up(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn up(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.up_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.up(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
     pub fn right(&mut self, extend: bool) {
@@ -190,23 +203,68 @@ impl Client {
         }
     }
 
-    pub fn page_down(&mut self) {
-        let f = self.inner.page_down(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn page_down(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.page_down_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.page_down(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
-    pub fn page_up(&mut self) {
-        let f = self.inner.page_up(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn page_up(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.page_up_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.page_up(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
-    pub fn line_start(&mut self) {
-        let f = self.inner.line_start(self.view_id).map_err(|_| ());
-        spawn(f);
+    pub fn line_start(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.line_start_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.line_start(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
     }
 
-    pub fn line_end(&mut self) {
-        let f = self.inner.line_end(self.view_id).map_err(|_| ());
+    pub fn line_end(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.line_end_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.line_end(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
+    }
+
+    pub fn document_begin(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.document_begin_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.document_begin(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
+    }
+
+    pub fn document_end(&mut self, extend: bool) {
+        if extend {
+            let f = self.inner.document_end_sel(self.view_id).map_err(|_| ());
+            spawn(f);
+        } else {        
+            let f = self.inner.document_end(self.view_id).map_err(|_| ());
+            spawn(f);
+        }
+    }
+
+    pub fn goto_line(&mut self, line: u64) {
+        let f = self.inner.goto_line(self.view_id, line).map_err(|_| ());
         spawn(f);
     }
 
