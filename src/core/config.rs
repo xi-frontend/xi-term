@@ -1,24 +1,19 @@
-use crate::core::{Command, RelativeMove, AbsoluteMove, ExpandLinesDirection, DEFAULT_KEYBINDINGS};
+use crate::core::{Command, DEFAULT_KEYBINDINGS};
 use termion::event::{Event, Key};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use std::path::{Path, PathBuf};
-use std::fs;
 use std::collections::HashMap;
-
-use std::str::FromStr;
 
 pub type Keymap = HashMap<Event, Command>;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Keybinding {
-    keys: Vec<String>,
-    command: String,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KeymapEntry {
+    pub keys: Vec<String>,
+    pub command: String,
     // For now, unstructured value
-    args: Option<Value>,
-    context: Option<Value>,
+    pub args: Option<Value>,
+    pub context: Option<Value>,
 }
 
 #[derive(Clone)]
@@ -31,34 +26,18 @@ impl KeybindingConfig {
     pub fn parse() -> Result<KeybindingConfig, Box<dyn std::error::Error + Sync + Send + 'static>> {
         // let entries = fs::read_to_string(config_path)?;
         // Read the JSON contents of the file as an instance of `User`.
-        let bindings: Vec<Keybinding> = json5::from_str(&DEFAULT_KEYBINDINGS)?;
+        let bindings: Vec<KeymapEntry> = json5::from_str(&DEFAULT_KEYBINDINGS)?;
         error!("Bindings parsed!");
 
         let mut keymap = Keymap::new();
         let mut found_cmds = Vec::new();
         for binding in bindings {
-            let cmd = match binding.command.as_ref() {
-                "move"    => {
-                    let args = binding.args.ok_or("move binding incomplete! Missing \"args\"")?;
-                    let cmd : RelativeMove = serde_json::from_value(args)?;
-                    Command::RelativeMove(cmd)
-                },
-                "move_to" => {
-                    let args = binding.args.ok_or("move_to binding incomplete! Missing \"args\"")?;
-                    let cmd : AbsoluteMove = serde_json::from_value(args)?;
-                    Command::AbsoluteMove(cmd)
-                },
-                "select_lines" => {
-                    let args = binding.args.ok_or("select_lines binding incomplete! Missing \"args\"")?;
-                    let cmd : ExpandLinesDirection = serde_json::from_value(args)?;
-                    Command::CursorExpandLines(cmd)
-                }
-                x =>  match Command::from_str(x) {
+            let cmd = match Command::from_keymap_entry(binding.clone()) {
                           Ok(cmd) => cmd,
                           // unimplemented command for now
                           Err(_) => continue,
-                }
             };
+
             if found_cmds.contains(&cmd) {
                 continue;
             }

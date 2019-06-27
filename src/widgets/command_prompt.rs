@@ -6,11 +6,9 @@ use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
 
-use crate::core::{Command, ParseCommandError};
+use crate::core::{Command, ParseCommandError, FromPrompt};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
-
-use std::str::FromStr;
 
 #[derive(Debug, Default)]
 pub struct CommandPrompt {
@@ -72,7 +70,7 @@ impl CommandPrompt {
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Result<Option<Command>, ParseCommandError> {
-        Ok(Some(FromStr::from_str(&self.chars)?))
+        Ok(Some(Command::from_prompt(&self.chars)?))
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {

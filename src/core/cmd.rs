@@ -3,8 +3,13 @@
 /// currently commands can only be input through the CommandPrompt. Vim style.
 use xrl::ViewId;
 
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
+
+use crate::core::KeymapEntry;
+
+pub trait FromPrompt {
+    fn from_prompt(vals: &str) -> Result<Command, ParseCommandError>;
+}
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -34,6 +39,66 @@ pub struct RelativeMove {
     pub extend: bool
 }
 
+impl FromPrompt for RelativeMove {
+    fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
+        let vals : Vec<&str> = args.split(' ').collect();
+        if vals.is_empty() {
+            return Err(ParseCommandError::ExpectedArgument{cmd: "move".to_string()});
+        }
+
+        if vals.len() > 2 {
+            return Err(ParseCommandError::TooManyArguments{cmd: "move".to_string(), expected: 2, found: vals.len()});
+        }
+
+        let extend = vals.len() == 2;
+        match vals[0] {
+            "d" | "down" => Ok(Command::RelativeMove(
+                                RelativeMove{
+                                            by: RelativeMoveDistance::lines, 
+                                            forward: true, 
+                                            extend
+                                            }
+                               )),
+            "u" | "up" => Ok(Command::RelativeMove(
+                                RelativeMove{
+                                            by: RelativeMoveDistance::lines, 
+                                            forward: false, 
+                                            extend
+                                            }
+                               )),
+            "r" | "right" => Ok(Command::RelativeMove(
+                                RelativeMove{
+                                            by: RelativeMoveDistance::characters, 
+                                            forward: true, 
+                                            extend
+                                            }
+                               )),
+            "l" | "left" => Ok(Command::RelativeMove(
+                                RelativeMove{
+                                            by: RelativeMoveDistance::characters, 
+                                            forward: false, 
+                                            extend
+                                            }
+                               )),
+            "pd" | "page-down" => Ok(Command::RelativeMove(
+                                        RelativeMove{
+                                                    by: RelativeMoveDistance::pages, 
+                                                    forward: true, 
+                                                    extend
+                                                    }
+                                       )),
+            "pu" | "page-up" => Ok(Command::RelativeMove(
+                                        RelativeMove{
+                                                    by: RelativeMoveDistance::pages, 
+                                                    forward: false, 
+                                                    extend
+                                                    }
+                                       )),
+            command => Err(ParseCommandError::UnknownCommand(command.into()))
+        }
+    }
+}
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum AbsoluteMovePoint {
@@ -57,6 +122,49 @@ pub struct AbsoluteMove {
     pub to: AbsoluteMovePoint,
     #[serde(default)]
     pub extend: bool
+}
+
+impl FromPrompt for AbsoluteMove {
+    fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
+        let vals : Vec<&str> = args.split(' ').collect();
+        if vals.is_empty() {
+            return Err(ParseCommandError::ExpectedArgument{cmd: "move_to".to_string()});
+        }
+
+        if vals.len() > 2 {
+            return Err(ParseCommandError::TooManyArguments{cmd: "move_to".to_string(), expected: 2, found: vals.len()});
+        }
+
+        let extend = vals.len() == 2;
+        match vals[0] {
+            "bof" | "beginning-of-file" => Ok(Command::AbsoluteMove(
+                                                    AbsoluteMove{
+                                                                to: AbsoluteMovePoint::bof,
+                                                                extend
+                                                                }
+                                                   )),
+            "eof" | "end-of-file" => Ok(Command::AbsoluteMove(
+                                                    AbsoluteMove{
+                                                                to: AbsoluteMovePoint::eof,
+                                                                extend
+                                                                }
+                                                   )),
+            "bol" | "beginning-of-line" => Ok(Command::AbsoluteMove(
+                                                    AbsoluteMove{
+                                                                to: AbsoluteMovePoint::bol,
+                                                                extend
+                                                                }
+                                                   )),
+            "eol" | "end-of-line" => Ok(Command::AbsoluteMove(
+                                                    AbsoluteMove{
+                                                                to: AbsoluteMovePoint::eol,
+                                                                extend
+                                                                }
+                                                   )),
+            command => Err(ParseCommandError::UnknownCommand(command.into()))
+        }
+
+    }
 }
 
 #[allow(non_camel_case_types)]
@@ -118,8 +226,8 @@ pub enum ParseCommandError {
     /// The given command expected an argument.
     ExpectedArgument {
         cmd: String,
-        expected: usize,
-        found: usize,
+        // expected: usize,
+        // found: usize,
     },
     /// The given command was given to many arguments.
     TooManyArguments {
@@ -131,11 +239,10 @@ pub enum ParseCommandError {
     UnknownCommand(String),
 }
 
-impl FromStr for Command {
-    type Err = ParseCommandError;
+impl Command {
 
-    fn from_str(s: &str) -> Result<Command, Self::Err> {
-        match &s[..] {
+    pub fn from_keymap_entry(val: KeymapEntry) -> Result<Command, ParseCommandError> {
+        match val.command.as_ref() {
             "copy" => Ok(Command::CopySelection),
             "cut" => Ok(Command::CutSelection),
             "paste" => Ok(Command::Paste),
@@ -149,108 +256,67 @@ impl FromStr for Command {
             "bp" | "prev-buffer" | "prev_view" => Ok(Command::PrevBuffer),
             "undo" => Ok(Command::Undo),
             "redo" => Ok(Command::Redo),
-            "md" | "move-down" => Ok(Command::RelativeMove(
-                                                    RelativeMove{
-                                                                by: RelativeMoveDistance::lines, 
-                                                                forward: true, 
-                                                                extend: false
-                                                                }
-                                                   )),
-            "mu" | "move-up" => Ok(Command::RelativeMove(
-                                                    RelativeMove{
-                                                                by: RelativeMoveDistance::lines, 
-                                                                forward: false, 
-                                                                extend: false
-                                                                }
-                                                   )),
-            "mr" | "move-right" => Ok(Command::RelativeMove(
-                                                    RelativeMove{
-                                                                by: RelativeMoveDistance::characters, 
-                                                                forward: true, 
-                                                                extend: false
-                                                                }
-                                                   )),
-            "ml" | "move-left" => Ok(Command::RelativeMove(
-                                                    RelativeMove{
-                                                                by: RelativeMoveDistance::characters, 
-                                                                forward: false, 
-                                                                extend: false
-                                                                }
-                                                   )),
-            "pd" | "page-down" => Ok(Command::RelativeMove(
-                                                    RelativeMove{
-                                                                by: RelativeMoveDistance::pages, 
-                                                                forward: true, 
-                                                                extend: false
-                                                                }
-                                                   )),
-            "pu" | "page-up" => Ok(Command::RelativeMove(
-                                                    RelativeMove{
-                                                                by: RelativeMoveDistance::pages, 
-                                                                forward: false, 
-                                                                extend: false
-                                                                }
-                                                   )),
-            "bof" | "beginning-of-file" => Ok(Command::AbsoluteMove(
-                                                    AbsoluteMove{
-                                                                to: AbsoluteMovePoint::bof,
-                                                                extend: false
-                                                                }
-                                                   )),
-            "eof" | "end-of-file" => Ok(Command::AbsoluteMove(
-                                                    AbsoluteMove{
-                                                                to: AbsoluteMovePoint::eof,
-                                                                extend: false
-                                                                }
-                                                   )),
-            "bol" | "beginning-of-line" => Ok(Command::AbsoluteMove(
-                                                    AbsoluteMove{
-                                                                to: AbsoluteMovePoint::bol,
-                                                                extend: false
-                                                                }
-                                                   )),
-            "eol" | "end-of-line" => Ok(Command::AbsoluteMove(
-                                                    AbsoluteMove{
-                                                                to: AbsoluteMovePoint::eol,
-                                                                extend: false
-                                                                }
-                                                   )),
             "ln" | "line-numbers" => Ok(Command::ToggleLineNumbers),
             "op" | "open-prompt" | "show_overlay" => Ok(Command::OpenPrompt),
-            command => {
-                let mut parts: Vec<&str> = command.split(' ').collect();
+            "move"    => {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
+                let cmd : RelativeMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
+                Ok(Command::RelativeMove(cmd))
+            },
+            "move_to" => {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move_to".to_string()})?;
+                let cmd : AbsoluteMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
+                Ok(Command::AbsoluteMove(cmd))
+            },
+            "select_lines" => {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "select_lines".to_string()})?;
+                let cmd : ExpandLinesDirection = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
+                Ok(Command::CursorExpandLines(cmd))
+            },
+            command => Err(ParseCommandError::UnknownCommand(command.into())),
+        }
+    }
+}
 
-                let cmd = parts.remove(0);
-                match cmd {
-                    "t" | "theme" => {
-                        if parts.is_empty() {
-                            Err(ParseCommandError::ExpectedArgument {
-                                cmd: "theme".into(),
-                                expected: 1,
-                                found: 0,
-                            })
-                        } else if parts.len() > 1 {
-                            Err(ParseCommandError::TooManyArguments {
-                                cmd: cmd.to_owned(),
-                                expected: 1,
-                                found: parts.len(),
-                            })
-                        } else {
-                            Ok(Command::SetTheme(parts[0].to_owned()))
-                        }
-                    }
-                    "o" | "open" => {
-                        if parts.is_empty() {
-                            Ok(Command::Open(None))
-                        } else if parts.len() > 1 {
-                            Err(ParseCommandError::UnexpectedArgument)
-                        } else {
-                            Ok(Command::Open(Some(parts[0].to_owned())))
-                        }
-                    }
-                    _ => Err(ParseCommandError::UnknownCommand(command.into())),
+impl FromPrompt for Command {
+    fn from_prompt(input: &str) -> Result<Command, ParseCommandError> {
+        let mut parts: Vec<&str> = input.splitn(2, ' ').collect();
+        let cmd = parts.remove(0);
+
+        // If no arguments are given, we can pass it along to the main parsing function
+        if parts.is_empty() {
+            return Command::from_keymap_entry(KeymapEntry{keys: Vec::new(), 
+                                                          command: cmd.to_string(), 
+                                                          args: None, 
+                                                          context: None});
+        }
+
+        // If we have prompt-arguments, we parse them directly to a command instead of going via json
+        let args = parts.remove(0);
+        match cmd.as_ref() {
+            "move"    => RelativeMove::from_prompt(args),
+            "move_to" => AbsoluteMove::from_prompt(args),
+            "t" | "theme" => {
+                if args.is_empty() {
+                    Err(ParseCommandError::ExpectedArgument {
+                        cmd: "theme".into()
+                    })
+                } else {
+                    Ok(Command::SetTheme(args.to_owned()))
                 }
             }
+            "o" | "open" => {
+                let parts: Vec<&str> = args.split(' ').collect();
+                if parts.is_empty() {
+                    Ok(Command::Open(None))
+                } else if parts.len() > 1 {
+                    Err(ParseCommandError::UnexpectedArgument)
+                } else {
+                    Ok(Command::Open(Some(parts[0].to_owned())))
+                }
+            }
+
+            command => Err(ParseCommandError::UnknownCommand(command.into())),
         }
     }
 }
