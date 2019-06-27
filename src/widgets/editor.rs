@@ -147,6 +147,7 @@ impl Editor {
             Command::PrevBuffer => self.prev_buffer(),
             Command::Save(view_id) => self.save(view_id),
             Command::Open(file) => self.new_view(file),
+            Command::CloseCurrentView => self.close_view(None),
             view_command => {
                         if let Some(view) = self.views.get_mut(&self.current_view) {
                             view.handle_command(view_command)
@@ -212,6 +213,27 @@ impl Editor {
             None => self
                 .delayed_events
                 .push(CoreEvent::Notify(XiNotification::ConfigChanged(config))),
+        }
+    }
+
+    /// Spawn a future that sends a "new_view" request to the core,
+    /// and forwards the response back to the `Editor`.
+    pub fn close_view(&mut self, view_id: Option<ViewId>) {
+        if self.views.len() <= 1 {
+            // We don't close the last view.
+            // TODO: Exit the editor instead
+            return;
+        }
+
+        let mut closed = false;
+        let view_to_close = view_id.unwrap_or(self.current_view);
+        if let Some(view) = self.views.get_mut(&view_to_close) {
+            view.handle_command(Command::CloseCurrentView);
+            closed = true;
+        }
+        if closed {
+            self.prev_buffer();
+            self.views.remove(&view_to_close);
         }
     }
 

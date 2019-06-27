@@ -41,6 +41,7 @@ impl Client {
             Command::Undo => self.undo(),
             Command::Redo => self.redo(),
             Command::CursorExpandLines(dir) => self.cursor_expand_line(dir.forward),
+            Command::CloseCurrentView => self.close(),
             Command::RelativeMove(x) => {
                 match x.by {
                     RelativeMoveDistance::characters => {
@@ -85,6 +86,12 @@ impl Client {
                 }
             }
         }
+    }
+
+
+    pub fn close(&mut self) {
+        let f = self.inner.close_view(self.view_id).map_err(|_| ());
+        spawn(f);
     }
 
     pub fn find_under_expand_next(&mut self) {
