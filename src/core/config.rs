@@ -96,6 +96,8 @@ impl KeybindingConfig {
             "shift+pagedown"   => Some(Event::Unsupported(vec![27, 91, 54, 59, 50, 126])),
             "shift+end"        => Some(Event::Unsupported(vec![27, 91, 49, 59, 50, 70])),
             "shift+home"       => Some(Event::Unsupported(vec![27, 91, 49, 59, 50, 72])),
+            "ctrl+pageup"      => Some(Event::Unsupported(vec![27, 91, 53, 59, 53, 126])),
+            "ctrl+pagedown"    => Some(Event::Unsupported(vec![27, 91, 54, 59, 53, 126])),
             
             // Not yet released
             // "shift+tab" => Some(Event::Key(Key::Backtab)),
