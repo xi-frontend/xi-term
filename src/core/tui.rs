@@ -10,7 +10,7 @@ use xrl::{Client, Frontend, FrontendBuilder, MeasureWidth, XiNotification};
 use failure::Error;
 
 use crate::core::{Command, Terminal, TerminalEvent, KeybindingConfig};
-use crate::widgets::{CommandPrompt, Editor};
+use crate::widgets::{CommandPrompt, CommandPromptMode, Editor};
 
 pub struct Tui {
     /// The editor holds the text buffers (named "views" in xi
@@ -55,7 +55,7 @@ impl Tui {
     pub fn run_command(&mut self, cmd: Command) {
         match cmd {
             // We handle these here, the rest is the job of the editor
-            Command::OpenPrompt => self.open_prompt(),
+            Command::OpenPrompt(x) => self.open_prompt(x),
             Command::Cancel => self.prompt = None,
             Command::Quit => self.exit = true,
 
@@ -63,21 +63,20 @@ impl Tui {
         }
     }
 
-    fn open_prompt(&mut self) {
+    fn open_prompt(&mut self, mode: CommandPromptMode) {
         if self.prompt.is_none() {
-            self.prompt = Some(CommandPrompt::default());
+            self.prompt = Some(CommandPrompt::new(mode));
         }
     }
 
     /// Global keybindings can be parsed here
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
-        // TODO: Translate here to own enum which supports more event-types
         if let Some(cmd) = self.editor.keybindings.keymap.get_mut(&event) {
             match cmd {
-                Command::OpenPrompt => {
+                Command::OpenPrompt(x) => {
                                         if self.prompt.is_none() {
-                                            self.prompt = Some(CommandPrompt::default());
+                                            self.prompt = Some(CommandPrompt::new(*x));
                                         }
                                         return; },
                 Command::Quit => { self.exit = true; return; },

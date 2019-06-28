@@ -21,7 +21,7 @@ impl Client {
     pub fn handle_command(&mut self, cmd: Command) {
         match cmd {
             Command::Cancel => {/* Handled by TUI */}
-            Command::OpenPrompt => {/* Handled by TUI */}
+            Command::OpenPrompt(_) => {/* Handled by TUI */}
             Command::Quit => {/* Handled by TUI */}
             Command::SetTheme(_theme) => { /* Handled by Editor */ },
             Command::NextBuffer => { /* Handled by Editor */ },
@@ -43,6 +43,9 @@ impl Client {
             Command::CursorExpandLines(dir) => self.cursor_expand_line(dir.forward),
             Command::CloseCurrentView => self.close(),
             Command::SelectAll => self.select_all(),
+            Command::Find(needle) => self.find(&needle),
+            Command::FindNext => self.find_next(),
+            Command::FindPrev => self.find_prev(),
             Command::RelativeMove(x) => {
                 match x.by {
                     RelativeMoveDistance::characters => {
@@ -87,6 +90,32 @@ impl Client {
                 }
             }
         }
+    }
+
+    pub fn find(&mut self, needle: &str) {
+        // TODO: Rewrite search to have its own struct with all there parameters configurable
+        let view_id = self.view_id.clone();
+        let inner = self.inner.clone();
+        // The first search should automatically place the cursor to the first occurence.
+        // We do this by doing find_next with "allow_same"
+        let f = self.inner.find(self.view_id, needle, false, false, false)
+                                .and_then(move |_| inner.find_next(view_id, true, true, xrl::ModifySelection::Set))
+                                .map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn find_next(&mut self) {
+        let f = self.inner
+                    .find_next(self.view_id, true, false, xrl::ModifySelection::Set)
+                    .map_err(|_| ());
+        spawn(f);        
+    }
+
+    pub fn find_prev(&mut self) {
+        let f = self.inner
+                    .find_prev(self.view_id, true, false, xrl::ModifySelection::Set)
+                    .map_err(|_| ());
+        spawn(f);        
     }
 
     pub fn select_all(&mut self) {

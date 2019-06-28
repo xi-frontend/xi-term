@@ -10,13 +10,26 @@ use crate::core::{Command, ParseCommandError, FromPrompt};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum CommandPromptMode {
+    // Parse commands from user-input
+    Command,
+    // Switch directly to search-mode
+    Find,
+}
+
+#[derive(Debug)]
 pub struct CommandPrompt {
+    mode: CommandPromptMode,
     dex: usize,
     chars: String,
 }
 
 impl CommandPrompt {
+    pub fn new(mode: CommandPromptMode) -> CommandPrompt {
+        CommandPrompt{mode, dex: 0, chars: Default::default()}
+    }
+
     /// Process a terminal event for the command prompt.
     pub fn handle_input(&mut self, input: &Event) -> Result<Option<Command>, ParseCommandError> {
         match input {
@@ -70,19 +83,37 @@ impl CommandPrompt {
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Result<Option<Command>, ParseCommandError> {
-        Ok(Some(Command::from_prompt(&self.chars)?))
+        match self.mode {
+            CommandPromptMode::Find => {
+                if self.chars.is_empty() {
+                    Err(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})
+                } else {
+                    Ok(Some(Command::Find(self.chars.clone())))
+                }
+            },
+            CommandPromptMode::Command => Ok(Some(Command::from_prompt(&self.chars)?)),
+        }
+        
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
+        let mode_indicator = match self.mode {
+            CommandPromptMode::Find => "find",
+            CommandPromptMode::Command => "",
+        };
+
+        let cursor_start = (self.dex + 2 + mode_indicator.len()) as u16;
+
         if let Err(err) = write!(
             w,
-            "{}{}:{}{}",
+            "{}{}{}:{}{}",
             Goto(1, row),
             ClearLine,
+            mode_indicator,
             self.chars,
-            Goto(self.dex as u16 + 2, row)
+            Goto(cursor_start, row)
         ) {
-            error!("faile to render status bar: {:?}", err);
+            error!("failed to render status bar: {:?}", err);
         }
         Ok(())
     }

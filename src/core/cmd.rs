@@ -4,8 +4,10 @@
 use xrl::ViewId;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::core::KeymapEntry;
+use crate::widgets::CommandPromptMode;
 
 pub trait FromPrompt {
     fn from_prompt(vals: &str) -> Result<Command, ParseCommandError>;
@@ -191,22 +193,28 @@ pub enum Command {
     NextBuffer,
     /// Cycle to the previous buffer.
     PrevBuffer,
-    // Relative move like line up/down, page up/down, left, right, word left, ..
+    /// Relative move like line up/down, page up/down, left, right, word left, ..
     RelativeMove(RelativeMove),
-    // Relative move like line ending/beginning, file ending/beginning, line-number, ...
+    /// Relative move like line ending/beginning, file ending/beginning, line-number, ...
     AbsoluteMove(AbsoluteMove),
-
+    /// Change current color theme
     SetTheme(String),
     /// Toggle displaying line numbers.
     ToggleLineNumbers,
     /// Open prompt for user-input
-    OpenPrompt,
+    OpenPrompt(CommandPromptMode),
     /// Insert a character
     Insert(char),
     /// Undo last action
     Undo,
     /// Redo last undone action
     Redo,
+    /// Find the given string
+    Find(String),
+    /// Find next occurence of active search
+    FindNext,
+    /// Find previous occurence of active search
+    FindPrev,
     /// Find word and set another cursor there
     FindUnderExpand,
     /// Set a new cursor below or above current position
@@ -253,6 +261,8 @@ impl Command {
             "cut" => Ok(Command::CutSelection),
             "paste" => Ok(Command::Paste),
             "fue" | "find_under_expand" => Ok(Command::FindUnderExpand),
+            "fn" | "find_next" => Ok(Command::FindNext),
+            "fp" | "find_prev" => Ok(Command::FindPrev),
             "hide_overlay" => Ok(Command::Cancel),
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" | "exit" => Ok(Command::Quit),
@@ -263,7 +273,34 @@ impl Command {
             "undo" => Ok(Command::Undo),
             "redo" => Ok(Command::Redo),
             "ln" | "line-numbers" => Ok(Command::ToggleLineNumbers),
-            "op" | "open-prompt" | "show_overlay" => Ok(Command::OpenPrompt),
+            "op" | "open-prompt" => Ok(Command::OpenPrompt(CommandPromptMode::Command)),
+            "show_overlay" => {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_overlay".to_string()})?;
+                match args.get("overlay") {
+                    None => Err(ParseCommandError::UnexpectedArgument),
+                    Some(value) => match value {
+                                        // We should catch "command_palette" here instead, but because of a bug in termion
+                                        // we can't parse ctrl+shift+p...
+                                        // Later on we might introduce another prompt mode for "goto" as well.
+                                        Value::String(x) if x == "goto" => Ok(Command::OpenPrompt(CommandPromptMode::Command)),
+                                        _ => Err(ParseCommandError::UnexpectedArgument),
+                                   }
+                }
+            }
+
+            "show_panel" => {
+                error!("+++++++++++++++ A1");
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_panel".to_string()})?;
+                match args.get("panel") {
+                    None => Err(ParseCommandError::UnexpectedArgument),
+                    Some(value) => { error!("+++++++++++++++ A2: {}", value);; match value {
+                                        Value::String(x) if x == "find" => Ok(Command::OpenPrompt(CommandPromptMode::Find)),
+                                        _ => Err(ParseCommandError::UnexpectedArgument),
+                                   }}
+                }
+            }
+
+
             "move"    => {
                 let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
                 let cmd : RelativeMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
@@ -322,6 +359,11 @@ impl FromPrompt for Command {
                 };
                 Ok(Command::Open(filename))
             }
+
+            "f" | "find" => {
+                let needle = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})?;
+                Ok(Command::Find(needle.to_string()))
+            },
 
             // The stuff we don't handle here, we pass on to the default parsing function
             // Since there is no way to know the shape of "args", we drop all 
