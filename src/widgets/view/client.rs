@@ -42,6 +42,7 @@ impl Client {
             Command::Redo => self.redo(),
             Command::CursorExpandLines(dir) => self.cursor_expand_line(dir.forward),
             Command::CloseCurrentView => self.close(),
+            Command::SelectAll => self.select_all(),
             Command::RelativeMove(x) => {
                 match x.by {
                     RelativeMoveDistance::characters => {
@@ -88,6 +89,10 @@ impl Client {
         }
     }
 
+    pub fn select_all(&mut self) {
+        let f = self.inner.select_all(self.view_id).map_err(|_| ());
+        spawn(f);
+    }
 
     pub fn close(&mut self) {
         let f = self.inner.close_view(self.view_id).map_err(|_| ());

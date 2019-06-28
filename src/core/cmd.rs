@@ -218,7 +218,9 @@ pub enum Command {
     /// Copy the current selection
     CutSelection,
     /// Close the current view
-    CloseCurrentView
+    CloseCurrentView,
+    /// Select all text in the current view
+    SelectAll,
 }
 
 #[derive(Debug)]
@@ -245,6 +247,7 @@ impl Command {
 
     pub fn from_keymap_entry(val: KeymapEntry) -> Result<Command, ParseCommandError> {
         match val.command.as_ref() {
+            "select_all" => Ok(Command::SelectAll),
             "close" => Ok(Command::CloseCurrentView),
             "copy" => Ok(Command::CopySelection),
             "cut" => Ok(Command::CutSelection),
