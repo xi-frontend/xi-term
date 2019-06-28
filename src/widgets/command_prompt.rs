@@ -6,7 +6,7 @@ use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
 
-use crate::core::{Command, ParseCommandError, FromPrompt, FindConfig};
+use crate::core::{Command, ParseCommandError, FromPrompt, FindConfig, Keymap};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
@@ -23,11 +23,12 @@ pub struct CommandPrompt {
     mode: CommandPromptMode,
     dex: usize,
     chars: String,
+    keybindings: Keymap
 }
 
 impl CommandPrompt {
-    pub fn new(mode: CommandPromptMode) -> CommandPrompt {
-        CommandPrompt{mode, dex: 0, chars: Default::default()}
+    pub fn new(mode: CommandPromptMode, keybindings: Keymap) -> CommandPrompt {
+        CommandPrompt{mode, dex: 0, chars: Default::default(), keybindings}
     }
 
     /// Process a terminal event for the command prompt.
@@ -90,6 +91,28 @@ impl CommandPrompt {
         
     }
 
+    fn render_suggestions<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
+        if self.chars.is_empty() {
+            return Ok(())
+        }
+
+        let vals : Vec<_> = self.keybindings.values().filter(|x| x.name.starts_with(&self.chars)).take(4).collect();
+        for (idx, val) in vals.iter().enumerate() {
+            if let Err(err) = write!(
+                w,
+                "{}{}-> {}   [{}]",
+                Goto(1, row - 1 - idx as u16),
+                ClearLine,
+                val.name,
+                val.keys,
+            ) {
+                error!("failed to render status bar: {:?}", err);
+                // TODO: Return error
+            }
+        }
+        Ok(())
+    }
+
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
         let mode_indicator; 
 
@@ -105,12 +128,14 @@ impl CommandPrompt {
                     All false by default. Example: \"cw Needle\"",
                     Goto(1, row - 1),
                     ClearLine,
-                    // Goto(cursor_start, row)
                 ) {
                     error!("failed to render status bar: {:?}", err);
                 }
             }   
-            CommandPromptMode::Command => {mode_indicator = "";},
+            CommandPromptMode::Command => {
+                mode_indicator = "";
+                self.render_suggestions(w, row)?;
+            },
         };
 
         let cursor_start = (self.dex + 2 + mode_indicator.len()) as u16;

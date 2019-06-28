@@ -65,7 +65,7 @@ impl Tui {
 
     fn open_prompt(&mut self, mode: CommandPromptMode) {
         if self.prompt.is_none() {
-            self.prompt = Some(CommandPrompt::new(mode));
+            self.prompt = Some(CommandPrompt::new(mode, self.editor.keybindings.keymap.clone()));
         }
     }
 
@@ -73,10 +73,10 @@ impl Tui {
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
         if let Some(cmd) = self.editor.keybindings.keymap.get_mut(&event) {
-            match cmd {
+            match cmd.command {
                 Command::OpenPrompt(x) => {
                                         if self.prompt.is_none() {
-                                            self.prompt = Some(CommandPrompt::new(*x));
+                                            self.prompt = Some(CommandPrompt::new(x, self.editor.keybindings.keymap.clone()));
                                         }
                                         return; },
                 Command::Quit => { self.exit = true; return; },
@@ -105,10 +105,14 @@ impl Tui {
     }
 
     fn render(&mut self) -> Result<(), Error> {
+        // We first render always the editor and then let the prompt rewrite parts
+        // of the screen (if active).
+        // Yes this is a big wasteful to render the editor for each prompt-input,
+        // but we render the editor for each editor-input as well :-)
+        self.editor.render(self.terminal.stdout())?;
+
         if let Some(ref mut prompt) = self.prompt {
             prompt.render(self.terminal.stdout(), self.term_size.1)?;
-        } else {
-            self.editor.render(self.terminal.stdout())?;
         }
         if let Err(e) = self.terminal.stdout().flush() {
             error!("failed to flush stdout: {}", e);

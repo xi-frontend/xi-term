@@ -126,7 +126,7 @@ impl Editor {
             Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),            
             ev => {
                 match self.keybindings.keymap.get(&ev).cloned() {
-                    Some(cmd) => self.handle_command(cmd),
+                    Some(cmd) => self.handle_command(cmd.command),
                     None => { 
                         if let Some(view) = self.views.get_mut(&self.current_view) {
                             match ev {

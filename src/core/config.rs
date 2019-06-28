@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-pub type Keymap = HashMap<Event, Command>;
+pub type Keymap = HashMap<Event, CommandMapEntry>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeymapEntry {
@@ -14,6 +14,15 @@ pub struct KeymapEntry {
     // For now, unstructured value
     pub args: Option<Value>,
     pub context: Option<Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandMapEntry {
+    pub name: String,
+    pub command: Command,
+    pub keys: String,
+    pub keyevent: Event,
+    pub helptext: String,
 }
 
 #[derive(Clone)]
@@ -41,9 +50,18 @@ impl KeybindingConfig {
             if found_cmds.contains(&cmd) {
                 continue;
             }
-            if let Some(binding) = KeybindingConfig::parse_keys(&binding.keys) {
+            if let Some(keyevent) = KeybindingConfig::parse_keys(&binding.keys) {
                 error!("{:?} = {:?}", cmd, binding);
-                keymap.insert(binding, cmd.clone());
+
+                let cmdentry = CommandMapEntry{
+                                            name: binding.command.clone(),
+                                            command: cmd.clone(),
+                                            keys: binding.keys[0].clone(), // can't panix, as parse_keys bails out if != 1
+                                            keyevent: keyevent.clone(),
+                                            helptext: String::new(), // TODO
+                                            // helptext: cmd.helptext(),
+                };
+                keymap.insert(keyevent, cmdentry);
                 found_cmds.push(cmd);
             } else {
                 // warn!("Skipping failed binding");
