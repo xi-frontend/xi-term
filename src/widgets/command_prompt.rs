@@ -91,9 +91,26 @@ impl CommandPrompt {
     }
 
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
-        let mode_indicator = match self.mode {
-            CommandPromptMode::Find => "find",
-            CommandPromptMode::Command => "",
+        let mode_indicator; 
+
+        match self.mode {
+            CommandPromptMode::Find => {
+                mode_indicator = "find";
+
+                // Write a line explaining the search above the searchbar
+                if let Err(err) = write!(
+                    w,
+                    "{}{}Prefix your search with r, c and/or w \
+                    to configure search to be (r)egex, (c)ase_sensitive, (w)hole_words. \
+                    All false by default. Example: \"cw Needle\"",
+                    Goto(1, row - 1),
+                    ClearLine,
+                    // Goto(cursor_start, row)
+                ) {
+                    error!("failed to render status bar: {:?}", err);
+                }
+            }   
+            CommandPromptMode::Command => {mode_indicator = "";},
         };
 
         let cursor_start = (self.dex + 2 + mode_indicator.len()) as u16;
