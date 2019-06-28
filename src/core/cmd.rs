@@ -175,6 +175,65 @@ pub struct ExpandLinesDirection {
     pub forward: bool
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FindConfig {
+    pub search_term: String,
+    pub case_sensitive: bool,
+    pub regex: bool,
+    pub whole_words: bool,
+}
+
+impl FromPrompt for FindConfig {
+    fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
+        if args.is_empty() {
+            return Err(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})
+        }
+
+        let mut search_term = args;
+        let mut case_sensitive = false;
+        let mut regex = false;
+        let mut whole_words = false;
+
+        let argsvec : Vec<&str> = args.splitn(2, ' ').collect();
+
+        if argsvec.len() == 2 && argsvec[0].len() <= 3 {
+            // We might have search control characters here
+            let control_chars = argsvec[0];
+
+            let mut failed = false;
+            let mut shadows = [false, false, false];
+            for cc in control_chars.chars() {
+                match cc {
+                    'c' => shadows[0] = true,
+                    'r' => shadows[1] = true,
+                    'w' => shadows[2] = true,
+                    _ => {
+                        // Ooops! This first part is NOT a control-sequence after all. Treat it as normal text
+                        failed = true;
+                        break;
+                    }
+                }
+            }
+
+            if !failed {
+                // Strip away control characters of search_term
+                search_term = argsvec[1];
+                case_sensitive = shadows[0];
+                regex          = shadows[1];
+                whole_words    = shadows[2];
+            }
+        }
+
+        let config = FindConfig{
+            search_term: search_term.to_string(),
+            case_sensitive,
+            regex,
+            whole_words,
+        };
+        Ok(Command::Find(config))
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Command {
     /// Close the CommandPrompt.
@@ -210,7 +269,7 @@ pub enum Command {
     /// Redo last undone action
     Redo,
     /// Find the given string
-    Find(String),
+    Find(FindConfig),
     /// Find next occurence of active search
     FindNext,
     /// Find previous occurence of active search
@@ -289,14 +348,13 @@ impl Command {
             }
 
             "show_panel" => {
-                error!("+++++++++++++++ A1");
                 let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_panel".to_string()})?;
                 match args.get("panel") {
                     None => Err(ParseCommandError::UnexpectedArgument),
-                    Some(value) => { error!("+++++++++++++++ A2: {}", value);; match value {
+                    Some(value) => match value {
                                         Value::String(x) if x == "find" => Ok(Command::OpenPrompt(CommandPromptMode::Find)),
                                         _ => Err(ParseCommandError::UnexpectedArgument),
-                                   }}
+                                   }
                 }
             }
 
@@ -362,7 +420,7 @@ impl FromPrompt for Command {
 
             "f" | "find" => {
                 let needle = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})?;
-                Ok(Command::Find(needle.to_string()))
+                FindConfig::from_prompt(needle)
             },
 
             // The stuff we don't handle here, we pass on to the default parsing function

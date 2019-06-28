@@ -3,7 +3,7 @@ use tokio::spawn;
 use xrl;
 use serde_json::Value;
 
-use crate::core::{Command, RelativeMoveDistance, AbsoluteMovePoint};
+use crate::core::{Command, RelativeMoveDistance, AbsoluteMovePoint, FindConfig};
 
 pub struct Client {
     inner: xrl::Client,
@@ -92,13 +92,12 @@ impl Client {
         }
     }
 
-    pub fn find(&mut self, needle: &str) {
-        // TODO: Rewrite search to have its own struct with all there parameters configurable
+    pub fn find(&mut self, needle: &FindConfig) {
         let view_id = self.view_id.clone();
         let inner = self.inner.clone();
         // The first search should automatically place the cursor to the first occurence.
         // We do this by doing find_next with "allow_same"
-        let f = self.inner.find(self.view_id, needle, false, false, false)
+        let f = self.inner.find(self.view_id, &needle.search_term, needle.case_sensitive, needle.regex, needle.whole_words)
                                 .and_then(move |_| inner.find_next(view_id, true, true, xrl::ModifySelection::Set))
                                 .map_err(|_| ());
         spawn(f);

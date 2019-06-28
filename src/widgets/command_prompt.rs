@@ -6,7 +6,7 @@ use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
 
-use crate::core::{Command, ParseCommandError, FromPrompt};
+use crate::core::{Command, ParseCommandError, FromPrompt, FindConfig};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
@@ -84,13 +84,7 @@ impl CommandPrompt {
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Result<Option<Command>, ParseCommandError> {
         match self.mode {
-            CommandPromptMode::Find => {
-                if self.chars.is_empty() {
-                    Err(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})
-                } else {
-                    Ok(Some(Command::Find(self.chars.clone())))
-                }
-            },
+            CommandPromptMode::Find => Ok(Some(FindConfig::from_prompt(&self.chars)?)),
             CommandPromptMode::Command => Ok(Some(Command::from_prompt(&self.chars)?)),
         }
         
