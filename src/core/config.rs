@@ -1,4 +1,4 @@
-use crate::core::{Command, DEFAULT_KEYBINDINGS};
+use crate::core::{Command, DEFAULT_KEYBINDINGS, ToPrompt};
 use termion::event::{Event, Key};
 
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,7 @@ impl KeybindingConfig {
                 error!("{:?} = {:?}", cmd, binding);
 
                 let cmdentry = CommandMapEntry{
-                                            name: binding.command.clone(),
+                                            name: cmd.to_prompt(),
                                             command: cmd.clone(),
                                             keys: binding.keys[0].clone(), // can't panix, as parse_keys bails out if != 1
                                             keyevent: keyevent.clone(),

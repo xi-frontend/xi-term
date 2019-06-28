@@ -13,6 +13,10 @@ pub trait FromPrompt {
     fn from_prompt(vals: &str) -> Result<Command, ParseCommandError>;
 }
 
+pub trait ToPrompt {
+    fn to_prompt(&self) -> String;
+}
+
 #[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum RelativeMoveDistance {
@@ -39,6 +43,28 @@ pub struct RelativeMove {
     pub forward: bool,
     #[serde(default)]
     pub extend: bool
+}
+
+impl ToPrompt for RelativeMove {
+    fn to_prompt(&self) -> String {
+        use RelativeMoveDistance::*;
+
+        let mut ret = "move ".to_string();
+        match self.by {
+            characters => {ret.push_str( if self.forward {"left"} else {"right"} ) },
+            lines => {ret.push_str( if self.forward {"down"} else {"up"} )},
+            words => {ret.push_str( if self.forward {"wordleft"} else {"wordright"} )},
+            word_ends => {ret.push_str( if self.forward {"wendleft"} else {"wendright"} )},
+            subwords => {ret.push_str( if self.forward {"subwordleft"} else {"subwordright"} )},
+            subword_ends => {ret.push_str( if self.forward {"subwendleft"} else {"subwendright"} )},
+            pages => {ret.push_str( if self.forward {"page-down"} else {"page-up"} )},
+        }
+
+        if self.extend {
+            ret.push_str(" (e)xtend");
+        }
+        ret
+    }
 }
 
 impl FromPrompt for RelativeMove {
@@ -125,6 +151,28 @@ pub struct AbsoluteMove {
     #[serde(default)]
     pub extend: bool
 }
+
+impl ToPrompt for AbsoluteMove {
+    fn to_prompt(&self) -> String {
+        use AbsoluteMovePoint::*;
+
+        let mut ret = "move ".to_string();
+        match self.to {
+            bof => {ret.push_str("bof")}
+            eof => {ret.push_str("eof")}
+            bol => {ret.push_str("bol")}
+            eol => {ret.push_str("eol")}
+            brackets => {ret.push_str("brackets")}
+            line(_) => {ret.push_str("<line>")}
+        }
+
+        if self.extend {
+            ret.push_str(" (e)xtend");
+        }
+        ret
+    }
+}
+
 
 impl FromPrompt for AbsoluteMove {
     fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
@@ -441,5 +489,42 @@ impl FromPrompt for Command {
                                                   args: None, 
                                                   context: None})
         }
+    }
+}
+
+impl ToPrompt for Command {
+    fn to_prompt(&self) -> String {
+        use Command::*;
+
+        let mut ret = String::new();
+        match self {
+            Cancel => ret.push_str("cancel"),
+            Quit => ret.push_str("quit"),
+            Save(_) => ret.push_str("save"),
+            Back => ret.push_str("back"),
+            Delete => ret.push_str("delete"),
+            Open(_) => ret.push_str("open"),
+            NextBuffer => ret.push_str("buffernext"),
+            PrevBuffer => ret.push_str("bufferprev"),
+            RelativeMove(x) => ret.push_str(&x.to_prompt()),
+            AbsoluteMove(x) => ret.push_str(&x.to_prompt()),
+            SetTheme(_) => ret.push_str("settheme"),
+            ToggleLineNumbers => ret.push_str("togglelinenumbers"),
+            OpenPrompt(_) => ret.push_str("open-prompt"),
+            Insert(_) => ret.push_str("insert"),
+            Undo => ret.push_str("undo"),
+            Redo => ret.push_str("redo"),
+            Find(_) => ret.push_str("find"),
+            FindNext => ret.push_str("findnext"),
+            FindPrev => ret.push_str("findprev"),
+            FindUnderExpand => ret.push_str("find_under_expand"),
+            CursorExpandLines(_) => ret.push_str("cursor_expand_lines"),
+            CopySelection => ret.push_str("copy"),
+            Paste => ret.push_str("paste"),
+            CutSelection => ret.push_str("cut"),
+            CloseCurrentView => ret.push_str("close"),
+            SelectAll => ret.push_str("selecta_ll"),
+        }
+        ret
     }
 }
