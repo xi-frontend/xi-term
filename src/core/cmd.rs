@@ -163,7 +163,17 @@ impl FromPrompt for AbsoluteMove {
                                                                 extend
                                                                 }
                                                    )),
-            command => Err(ParseCommandError::UnknownCommand(command.into()))
+
+            command => {
+                let number = command.parse::<u64>().map_err(|_| ParseCommandError::UnknownCommand(command.into()))?;
+                Ok(Command::AbsoluteMove(
+                                AbsoluteMove{
+                                            to: AbsoluteMovePoint::line(number),
+                                            extend: false
+                                            }
+                                )
+                )
+            }
         }
 
     }
