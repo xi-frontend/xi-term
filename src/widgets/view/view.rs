@@ -148,6 +148,11 @@ impl View {
         self.client.click(line, column);
     }
 
+    fn click_cursor_extend(&mut self, x: u64, y: u64) {
+        let (line, column) = self.get_click_location(x, y);
+        self.client.click_cursor_extend(line, column);
+    }
+
     fn drag(&mut self, x: u64, y: u64) {
         let (line, column) = self.get_click_location(x, y);
         self.client.drag(line, column);
@@ -218,6 +223,7 @@ impl View {
         match mouse_event {
             MouseEvent::Press(press_event, y, x) => match press_event {
                 MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
+                MouseButton::Middle => self.click_cursor_extend(u64::from(x) - 1, u64::from(y) - 1),
                 MouseButton::WheelUp => self.client.up(false),
                 MouseButton::WheelDown => self.client.down(false),
                 button => error!("un-handled button {:?}", button),

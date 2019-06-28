@@ -323,19 +323,6 @@ impl Client {
         spawn(f);
     }
 
-    pub fn click(&mut self, line: u64, column: u64) {
-        let f = self
-            .inner
-            .click_point_select(self.view_id, line, column)
-            .map_err(|_| ());
-        spawn(f);
-    }
-
-    pub fn drag(&mut self, line: u64, column: u64) {
-        let f = self.inner.drag(self.view_id, line, column).map_err(|_| ());
-        spawn(f);
-    }
-
     pub fn collapse_selections(&mut self) {
         let f = self.inner.collapse_selections(self.view_id).map_err(|_| ());
         spawn(f);
@@ -345,6 +332,28 @@ impl Client {
         let command = if forward { "add_selection_below" } else { "add_selection_above" };
         let f = self.inner.edit_notify(self.view_id, command, None as Option<Value>)
                     .map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn click(&mut self, line: u64, column: u64) {
+        let f = self
+            .inner
+            .click_point_select(self.view_id, line, column)
+            .map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn click_cursor_extend(&mut self, line: u64, column: u64) {
+        let f = self.inner.edit_notify(
+            self.view_id,
+            "gesture",
+            Some(json!({"line": line, "col": column, "ty": {"select": {"granularity": "point", "multi": true}}})),
+        ).map_err(|_| ());
+        spawn(f);
+    }
+
+    pub fn drag(&mut self, line: u64, column: u64) {
+        let f = self.inner.drag(self.view_id, line, column).map_err(|_| ());
         spawn(f);
     }
 }
