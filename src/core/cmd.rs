@@ -289,41 +289,47 @@ impl FromPrompt for Command {
         let mut parts: Vec<&str> = input.splitn(2, ' ').collect();
         let cmd = parts.remove(0);
 
-        // If no arguments are given, we can pass it along to the main parsing function
-        if parts.is_empty() {
-            return Command::from_keymap_entry(KeymapEntry{keys: Vec::new(), 
-                                                          command: cmd.to_string(), 
-                                                          args: None, 
-                                                          context: None});
-        }
-
         // If we have prompt-arguments, we parse them directly to a command instead of going via json
-        let args = parts.remove(0);
+        let args = parts.get(0);
         match cmd.as_ref() {
-            "move"    => RelativeMove::from_prompt(args),
-            "move_to" => AbsoluteMove::from_prompt(args),
+            // First, catch some prompt-specific commands (usually those with arguments),
+            // which need different parsing than whats coming from the keymap-file
+            "move"    => {
+                let arg = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
+                RelativeMove::from_prompt(arg)
+            },
+            "move_to" => {
+                let arg = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
+                AbsoluteMove::from_prompt(arg)
+            },
             "t" | "theme" => {
-                if args.is_empty() {
-                    Err(ParseCommandError::ExpectedArgument {
-                        cmd: "theme".into()
-                    })
-                } else {
-                    Ok(Command::SetTheme(args.to_owned()))
-                }
-            }
+                let theme = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "theme".to_string()})?;
+                Ok(Command::SetTheme(theme.to_string()))
+            },
             "o" | "open" => {
-                let parts: Vec<&str> = args.split(' ').collect();
-                if parts.is_empty() {
-                    Ok(Command::Open(None))
-                } else if parts.len() > 1 {
-                    Err(ParseCommandError::UnexpectedArgument)
-                } else {
-                    let file = shellexpand::full(parts[0]).map_err(|_| ParseCommandError::UnknownCommand(parts[0].to_string()))?;
-                    Ok(Command::Open(Some(file.to_string())))
-                }
+                // Don't split given arguments by space, as filenames can have spaces in them as well!
+                let filename = match args {
+                    Some(name) => {
+                        // We take the value given from the prompt and run it through shellexpand,
+                        // to translate to a real path (e.g. "~/.bashrc" doesn't work without this)
+                        let expanded_name = shellexpand::full(name)
+                                               .map_err(|_| ParseCommandError::UnknownCommand(name.to_string()))?;
+                        Some(expanded_name.to_string())
+                    },
+
+                    // If no args where given we open with "None", which is ok, too.
+                    None => None,
+                };
+                Ok(Command::Open(filename))
             }
 
-            command => Err(ParseCommandError::UnknownCommand(command.into())),
+            // The stuff we don't handle here, we pass on to the default parsing function
+            // Since there is no way to know the shape of "args", we drop all 
+            // potentially given prompt-args for this command here.
+            command => Command::from_keymap_entry(KeymapEntry{keys: Vec::new(), 
+                                                  command: command.to_string(), 
+                                                  args: None, 
+                                                  context: None})
         }
     }
 }
