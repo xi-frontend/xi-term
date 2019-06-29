@@ -1,7 +1,6 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::io::Write;
-use std::sync::{Arc, Mutex};
 use futures::future::Future;
 
 use failure::Error;
@@ -33,7 +32,6 @@ pub struct View {
     cfg: ViewConfig,
 
     search_in_progress: bool,
-    clipboard: Arc<Mutex<Option<String>>>,
 }
 
 impl View {
@@ -46,7 +44,6 @@ impl View {
             client,
             file,
             search_in_progress: false,
-            clipboard: Arc::new(Mutex::new(None))
         }
     }
 
@@ -167,44 +164,16 @@ impl View {
         }
     }
 
-    fn paste(&mut self) {
-        let clipboard = self.clipboard.lock().unwrap();
-        match *clipboard {
-            Some(ref content) => self.client.paste(content),
-            None => {}
-        };
+    pub fn paste(&mut self, text: &str) {
+        self.client.paste(text)
     }
 
-
-    fn cut(&mut self) {
-        let arc = self.clipboard.clone();
-        let future = self.client.cut()
-                      .and_then(move |x| { let mut clipboard = arc.lock().unwrap();
-                                      *clipboard = match x {
-                                                            Value::String(s) => Some(s),
-                                                            z => { error!("ERROR when parsing copy-answer: Wrong type. {:?}", z); None },
-                                      };
-                                      error!("Clipboard is now: {:?}", *clipboard);
-                                      Ok(())
-                                     })
-                      .map_err(|_| ());
-        tokio::spawn(future);
+    pub fn copy(&mut self) -> impl Future<Item = Value, Error = xrl::ClientError> {
+        self.client.copy()
     }
 
-
-    fn copy(&mut self) {
-        let arc = self.clipboard.clone();
-        let future = self.client.copy()
-                      .and_then(move |x| { let mut clipboard = arc.lock().unwrap();
-                                      *clipboard = match x {
-                                                            Value::String(s) => Some(s),
-                                                            z => { error!("ERROR when parsing copy-answer: Wrong type. {:?}", z); None },
-                                      };
-                                      error!("Clipboard is now: {:?}", *clipboard);
-                                      Ok(())
-                                     })
-                      .map_err(|_| ());
-        tokio::spawn(future);
+    pub fn cut(&mut self) -> impl Future<Item = Value, Error = xrl::ClientError> {
+        self.client.cut()
     }
 
     pub fn handle_command(&mut self, cmd: Command) {
@@ -212,9 +181,6 @@ impl View {
             Command::ToggleLineNumbers => self.toggle_line_numbers(),
             Command::FindUnderExpand => self.find_under_expand(),
             Command::Cancel => { self.search_in_progress = false; self.client.collapse_selections() },
-            Command::CopySelection => self.copy(),
-            Command::Paste => self.paste(),
-            Command::CutSelection => self.cut(),
             client_command => self.client.handle_command(client_command),
         }
     }
