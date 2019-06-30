@@ -1,11 +1,11 @@
-use crate::core::{Command, DEFAULT_KEYBINDINGS, ToPrompt};
+use crate::core::{Command, DEFAULT_KEYBINDINGS, ParserMap, get_parser_map};
 use termion::event::{Event, Key};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-pub type Keymap = HashMap<Event, CommandMapEntry>;
+pub type KeyMap = HashMap<Event, Command>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeymapEntry {
@@ -16,18 +16,10 @@ pub struct KeymapEntry {
     pub context: Option<Value>,
 }
 
-#[derive(Debug, Clone)]
-pub struct CommandMapEntry {
-    pub name: String,
-    pub command: Command,
-    pub keys: String,
-    pub keyevent: Event,
-    pub helptext: String,
-}
-
 #[derive(Clone)]
 pub struct KeybindingConfig {
-    pub keymap: Keymap,
+    pub keymap: KeyMap,
+    pub parser_map: ParserMap,
     // pub config_path: PathBuf
 }
 
@@ -37,40 +29,41 @@ impl KeybindingConfig {
         // Read the JSON contents of the file as an instance of `User`.
         let bindings: Vec<KeymapEntry> = json5::from_str(&DEFAULT_KEYBINDINGS)?;
         error!("Bindings parsed!");
-
-        let mut keymap = Keymap::new();
+        let mut parser_map = get_parser_map();
+        let mut keymap = KeyMap::new();
         let mut found_cmds = Vec::new();
         for binding in bindings {
-            let cmd = match Command::from_keymap_entry(binding.clone()) {
-                          Ok(cmd) => cmd,
-                          // unimplemented command for now
-                          Err(_) => continue,
-            };
-
-            if found_cmds.contains(&cmd) {
-                continue;
-            }
-            if let Some(keyevent) = KeybindingConfig::parse_keys(&binding.keys) {
-                error!("{:?} = {:?}", cmd, binding);
-
-                let cmdentry = CommandMapEntry{
-                                            name: cmd.to_prompt(),
-                                            command: cmd.clone(),
-                                            keys: binding.keys[0].clone(), // can't panix, as parse_keys bails out if != 1
-                                            keyevent: keyevent.clone(),
-                                            helptext: String::new(), // TODO
-                                            // helptext: cmd.helptext(),
+            let cmd_name = binding.command.clone();
+            if let Some(parser) = parser_map.get_mut::<str>(&cmd_name) {
+                let cmd_res = match parser.from_keymap_entry {
+                    Some(func) => func(binding.clone()),
+                    None => (parser.from_prompt)(None), /* We don't have add. arguments here */
                 };
-                keymap.insert(keyevent, cmdentry);
-                found_cmds.push(cmd);
-            } else {
-                // warn!("Skipping failed binding");
-                continue;
+                let cmd = match cmd_res {
+                    Ok(cmd) => cmd,
+                    // unimplemented command for now
+                    Err(_) => continue,
+                };
+
+                // Multiple command (this is a hack and needs some thought how to do it right)
+                if found_cmds.contains(&cmd) {
+                    continue;
+                }
+
+                if let Some(keyevent) = KeybindingConfig::parse_keys(&binding.keys) {
+                    error!("{:?} = {:?}", cmd, binding);
+                    keymap.insert(keyevent, cmd.clone());
+                    parser.keybinding = Some(binding.keys[0].clone());
+                    found_cmds.push(cmd);
+                } else {
+                    // warn!("Skipping failed binding");
+                    continue;
+                }
             }
         }
 
         // Ok(KeybindingConfig{keymap: keymap, config_path: config_path.to_owned()})
-        Ok(KeybindingConfig{keymap})
+        Ok(KeybindingConfig{keymap, parser_map})
     }
 
     fn parse_keys(keys: &Vec<String>) -> Option<Event> {

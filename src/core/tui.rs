@@ -18,7 +18,7 @@ pub struct Tui {
     editor: Editor,
 
     /// The command prompt is where users can type commands.
-    prompt: Option<CommandPrompt>,
+    prompt: CommandPrompt,
 
     /// The terminal is used to draw on the screen a get inputs from
     /// the user.
@@ -41,8 +41,8 @@ impl Tui {
             terminal: Terminal::new()?,
             exit: false,
             term_size: (0, 0),
-            editor: Editor::new(client, keybindings),
-            prompt: None,
+            editor: Editor::new(client, keybindings.keymap), // Here we split the keybindings in two parts.
+            prompt: CommandPrompt::new(CommandPromptMode::Inactive, keybindings.parser_map),
             core_events: events,
         })
     }
@@ -55,53 +55,41 @@ impl Tui {
     pub fn run_command(&mut self, cmd: Command) {
         match cmd {
             // We handle these here, the rest is the job of the editor
-            Command::OpenPrompt(x) => self.open_prompt(x),
-            Command::Cancel => self.prompt = None,
+            Command::OpenPrompt(x) => self.prompt.set_mode(x),
+            Command::Cancel if self.prompt.is_active() => self.prompt.set_mode(CommandPromptMode::Inactive),
             Command::Quit => self.exit = true,
 
             editor_cmd => self.editor.handle_command(editor_cmd)
         }
     }
 
-    fn open_prompt(&mut self, mode: CommandPromptMode) {
-        if self.prompt.is_none() {
-            self.prompt = Some(CommandPrompt::new(mode, self.editor.keybindings.keymap.clone()));
-        }
-    }
-
     /// Global keybindings can be parsed here
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
-        if let Some(cmd) = self.editor.keybindings.keymap.get_mut(&event) {
-            match cmd.command {
-                Command::OpenPrompt(x) => {
-                                        if self.prompt.is_none() {
-                                            self.prompt = Some(CommandPrompt::new(x, self.editor.keybindings.keymap.clone()));
-                                        }
-                                        return; },
+        if let Some(cmd) = self.editor.keymap.get_mut(&event) {
+            match cmd {
+                Command::OpenPrompt(x) => { self.prompt.set_mode(*x); return; },
                 Command::Quit => { self.exit = true; return; },
-                Command::Cancel if !self.prompt.is_none() => { self.prompt = None; return; },
+                Command::Cancel if self.prompt.is_active() => { self.prompt.set_mode(CommandPromptMode::Inactive); return; },
                 _ => {/* Somebody else has to deal with these commands */},
             }
         }
 
         // No command prompt is active, process the event normally.
-        if self.prompt.is_none() {
+        if self.prompt.is_active() {
+            // // A command prompt is active.
+            // let mut prompt = self.prompt.take().unwrap();
+            match self.prompt.handle_input(&event) {
+                Ok(Some(cmd)) => self.run_command(cmd),
+                Ok(None) => { /* Not a key that was relevant for prompt. Do nothing. */ }
+                Err(err) => {
+                    error!("Failed to parse command: {:?}", err);
+                }
+            }
+        } else {
             self.editor.handle_input(event);
-            return;
         }
 
-        // A command prompt is active.
-        let mut prompt = self.prompt.take().unwrap();
-        match prompt.handle_input(&event) {
-            Ok(None) => {
-                self.prompt = Some(prompt);
-            }
-            Ok(Some(cmd)) => self.run_command(cmd),
-            Err(err) => {
-                error!("Failed to parse command: {:?}", err);
-            }
-        }
     }
 
     fn render(&mut self) -> Result<(), Error> {
@@ -111,9 +99,8 @@ impl Tui {
         // but we render the editor for each editor-input as well :-)
         self.editor.render(self.terminal.stdout())?;
 
-        if let Some(ref mut prompt) = self.prompt {
-            prompt.render(self.terminal.stdout(), self.term_size.1)?;
-        }
+        // If its inactive, this will be a no-op
+        self.prompt.render(self.terminal.stdout(), self.term_size.1)?;
         if let Err(e) = self.terminal.stdout().flush() {
             error!("failed to flush stdout: {}", e);
         }

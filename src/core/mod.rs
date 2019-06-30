@@ -8,7 +8,7 @@ mod cmd;
 pub use self::cmd::*;
 
 mod config;
-pub use self::config::{KeybindingConfig, Keymap, KeymapEntry};
+pub use self::config::{KeybindingConfig, KeyMap, KeymapEntry};
 
 mod default_keybindings;
 pub use self::default_keybindings::DEFAULT_KEYBINDINGS;

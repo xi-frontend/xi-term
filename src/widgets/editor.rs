@@ -11,7 +11,7 @@ use serde_json::Value;
 
 use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
-use crate::core::{Command, CoreEvent, KeybindingConfig};
+use crate::core::{Command, CoreEvent, KeyMap};
 
 use crate::widgets::{View, ViewClient};
 
@@ -54,13 +54,13 @@ pub struct Editor {
     pub size: (u16, u16),
     pub styles: HashMap<u64, Style>,
 
-    pub keybindings: KeybindingConfig,
+    pub keymap: KeyMap,
     clipboard: Option<String>,
 }
 
 /// Methods for general use.
 impl Editor {
-    pub fn new(client: Client, keybindings: KeybindingConfig) -> Editor {
+    pub fn new(client: Client, keymap: KeyMap) -> Editor {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
         let (xi_reply_tx, xi_reply_rx) = mpsc::unbounded::<XiReply>();
@@ -74,7 +74,7 @@ impl Editor {
             client,
             size: (0, 0),
             styles,
-            keybindings,
+            keymap,
             clipboard: None,
         }
     }
@@ -141,8 +141,8 @@ impl Editor {
         match event {
             Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),            
             ev => {
-                match self.keybindings.keymap.get(&ev).cloned() {
-                    Some(cmd) => self.handle_command(cmd.command),
+                match self.keymap.get(&ev).cloned() {
+                    Some(cmd) => self.handle_command(cmd),
                     None => { 
                         if let Some(view) = self.views.get_mut(&self.current_view) {
                             match ev {

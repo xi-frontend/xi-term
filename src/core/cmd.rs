@@ -8,13 +8,208 @@ use serde_json::Value;
 
 use crate::core::KeymapEntry;
 use crate::widgets::CommandPromptMode;
+use std::collections::HashMap;
 
-pub trait FromPrompt {
-    fn from_prompt(vals: &str) -> Result<Command, ParseCommandError>;
+pub type ParserMap = HashMap<&'static str, CommandParser>;
+
+#[derive(Clone)]
+pub struct CommandParser {
+    pub keybinding: Option<String>,
+    pub from_prompt: fn(add_args: Option<&str>) -> Result<Command, ParseCommandError>,
+    // pub to_prompt: fn() -> String,
+    pub subcommands: Vec<&'static str>,
+    pub from_keymap_entry: Option<fn (val: KeymapEntry) -> Result<Command, ParseCommandError>>,
 }
 
-pub trait ToPrompt {
-    fn to_prompt(&self) -> String;
+pub fn get_parser_map() -> ParserMap {
+    let mut map = HashMap::new();
+
+    map.insert("select_all", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::SelectAll),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("close", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::CloseCurrentView),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("copy", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::CopySelection),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("cut", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::CutSelection),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("paste", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Paste),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "fue" | 
+    map.insert("find_under_expand", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::FindUnderExpand),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "fn" | 
+    map.insert("find_next", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::FindNext),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "fp" | 
+    map.insert("find_prev", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::FindPrev),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("hide_overlay", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Cancel),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("save", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Save(None)),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "q" | "quit"
+    map.insert("exit", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Quit),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "b" | "back" | 
+    map.insert("left_delete", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Back),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "d" | "delete" | 
+    map.insert("right_delete", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Delete),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "bn" | "next-buffer" | 
+    map.insert("next_view", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::NextBuffer),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "bp" | "prev-buffer" | 
+    map.insert("prev_view", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::PrevBuffer),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("undo", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Undo),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("redo", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::Redo),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "ln" | 
+    map.insert("line-numbers", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::ToggleLineNumbers),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    // "op" | 
+    map.insert("open-prompt", CommandParser{ keybinding: None,
+        from_prompt: |_| Ok(Command::OpenPrompt(CommandPromptMode::Command)),
+        subcommands: vec![],
+        from_keymap_entry: None});
+    map.insert("select_all", CommandParser{ keybinding: None,
+        from_prompt:       |_| Ok(Command::SelectAll), 
+        subcommands:      vec![], 
+        from_keymap_entry: None});
+    map.insert("move", CommandParser{ keybinding: None,
+        from_prompt: RelativeMove::from_prompt, 
+        subcommands: vec!["left", "right", "down", "up", "wordleft", "wordright", 
+                          "wendleft", "wendright", "subwordleft", "subwordright", 
+                          "subwendleft", "subwendright", "page-down", "page-up"], 
+        from_keymap_entry: Some(|val| {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
+                let cmd : RelativeMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
+                Ok(Command::RelativeMove(cmd))})});
+    map.insert("move_to", CommandParser{ keybinding: None,
+        from_prompt: AbsoluteMove::from_prompt, 
+        subcommands: vec!["bof", "eof", "bol", "eol", "brackets", "<linenumber>"],
+        from_keymap_entry: Some(|val| {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move_to".to_string()})?;
+                let cmd : AbsoluteMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
+                Ok(Command::AbsoluteMove(cmd))})});
+    map.insert("select_lines", CommandParser{ keybinding: None,
+        from_prompt: AbsoluteMove::from_prompt, 
+        subcommands: vec!["above", "below"],
+        from_keymap_entry: Some(|val| {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "select_lines".to_string()})?;
+                let cmd : ExpandLinesDirection = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
+                Ok(Command::CursorExpandLines(cmd))})});
+    // "t"
+    map.insert("theme", CommandParser{ keybinding: None,
+        from_prompt: |args| {
+                         let theme = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "theme".to_string()})?;
+                         Ok(Command::SetTheme(theme.to_string()))
+                     }, 
+        subcommands:      vec!["<themename>"],  // TODO: Get in here the available themes
+        from_keymap_entry: None});
+    // "f"
+    map.insert("find", CommandParser{ keybinding: None,
+        from_prompt: |args| {
+                        let needle = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})?;
+                        FindConfig::from_prompt(Some(needle))
+                     },
+        subcommands:      vec!["<needle>"], 
+        from_keymap_entry: None});
+    // "o"
+    map.insert("open", CommandParser{ keybinding: None,
+        from_prompt: |args| {
+                         // Don't split given arguments by space, as filenames can have spaces in them as well!
+                         let filename = match args {
+                            Some(name) => {
+                                // We take the value given from the prompt and run it through shellexpand,
+                                // to translate to a real path (e.g. "~/.bashrc" doesn't work without this)
+                                let expanded_name = shellexpand::full(name)
+                                                       .map_err(|_| ParseCommandError::UnknownCommand(name.to_string()))?;
+                                Some(expanded_name.to_string())
+                            },
+ 
+                             // If no args where given we open with "None", which is ok, too.
+                             None => None,
+                         };
+                         Ok(Command::Open(filename))
+                     },
+        subcommands:      vec!["<needle>"], 
+        from_keymap_entry: None});
+    map.insert("show_overlay", CommandParser{ keybinding: None,
+        from_prompt: |_| { Err(ParseCommandError::UnexpectedArgument) },
+        subcommands:      vec![], 
+        from_keymap_entry: Some(|val| {
+                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_overlay".to_string()})?;
+                match args.get("overlay") {
+                    None => Err(ParseCommandError::UnexpectedArgument),
+                    Some(value) => match value {
+                                        // We should catch "command_palette" here instead, but because of a bug in termion
+                                        // we can't parse ctrl+shift+p...
+                                        // Later on we might introduce another prompt mode for "goto" as well.
+                                        Value::String(x) if x == "goto" => Ok(Command::OpenPrompt(CommandPromptMode::Command)),
+                                        _ => Err(ParseCommandError::UnexpectedArgument),
+                                   }
+                }
+        })
+    });
+    map.insert("show_panel", CommandParser{ keybinding: None,
+        from_prompt: |_| { Err(ParseCommandError::UnexpectedArgument) },
+        subcommands:      vec![], 
+        from_keymap_entry: Some(|val| {
+                   let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_panel".to_string()})?;
+                    match args.get("panel") {
+                        None => Err(ParseCommandError::UnexpectedArgument),
+                        Some(value) => match value {
+                                            Value::String(x) if x == "find" => Ok(Command::OpenPrompt(CommandPromptMode::Find)),
+                                            _ => Err(ParseCommandError::UnexpectedArgument),
+                                       }
+                    }
+        })
+    });
+
+    map
+}
+
+pub trait FromPrompt {
+    fn from_prompt(vals: Option<&str>) -> Result<Command, ParseCommandError>;
 }
 
 #[allow(non_camel_case_types)]
@@ -45,30 +240,9 @@ pub struct RelativeMove {
     pub extend: bool
 }
 
-impl ToPrompt for RelativeMove {
-    fn to_prompt(&self) -> String {
-        use RelativeMoveDistance::*;
-
-        let mut ret = "move ".to_string();
-        match self.by {
-            characters => {ret.push_str( if self.forward {"left"} else {"right"} ) },
-            lines => {ret.push_str( if self.forward {"down"} else {"up"} )},
-            words => {ret.push_str( if self.forward {"wordleft"} else {"wordright"} )},
-            word_ends => {ret.push_str( if self.forward {"wendleft"} else {"wendright"} )},
-            subwords => {ret.push_str( if self.forward {"subwordleft"} else {"subwordright"} )},
-            subword_ends => {ret.push_str( if self.forward {"subwendleft"} else {"subwendright"} )},
-            pages => {ret.push_str( if self.forward {"page-down"} else {"page-up"} )},
-        }
-
-        if self.extend {
-            ret.push_str(" (e)xtend");
-        }
-        ret
-    }
-}
-
 impl FromPrompt for RelativeMove {
-    fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
+    fn from_prompt(args: Option<&str>) -> Result<Command, ParseCommandError> {
+        let args = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
         let vals : Vec<&str> = args.split(' ').collect();
         if vals.is_empty() {
             return Err(ParseCommandError::ExpectedArgument{cmd: "move".to_string()});
@@ -152,30 +326,9 @@ pub struct AbsoluteMove {
     pub extend: bool
 }
 
-impl ToPrompt for AbsoluteMove {
-    fn to_prompt(&self) -> String {
-        use AbsoluteMovePoint::*;
-
-        let mut ret = "move ".to_string();
-        match self.to {
-            bof => {ret.push_str("bof")}
-            eof => {ret.push_str("eof")}
-            bol => {ret.push_str("bol")}
-            eol => {ret.push_str("eol")}
-            brackets => {ret.push_str("brackets")}
-            line(_) => {ret.push_str("<line>")}
-        }
-
-        if self.extend {
-            ret.push_str(" (e)xtend");
-        }
-        ret
-    }
-}
-
-
 impl FromPrompt for AbsoluteMove {
-    fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
+    fn from_prompt(args: Option<&str>) -> Result<Command, ParseCommandError> {
+        let args = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move_to".to_string()})?;
         let vals : Vec<&str> = args.split(' ').collect();
         if vals.is_empty() {
             return Err(ParseCommandError::ExpectedArgument{cmd: "move_to".to_string()});
@@ -242,7 +395,8 @@ pub struct FindConfig {
 }
 
 impl FromPrompt for FindConfig {
-    fn from_prompt(args: &str) -> Result<Command, ParseCommandError> {
+    fn from_prompt(args: Option<&str>) -> Result<Command, ParseCommandError> {
+        let args = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})?;
         if args.is_empty() {
             return Err(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})
         }
@@ -366,165 +520,4 @@ pub enum ParseCommandError {
     },
     /// Invalid input was received.
     UnknownCommand(String),
-}
-
-impl Command {
-
-    pub fn from_keymap_entry(val: KeymapEntry) -> Result<Command, ParseCommandError> {
-        match val.command.as_ref() {
-            "select_all" => Ok(Command::SelectAll),
-            "close" => Ok(Command::CloseCurrentView),
-            "copy" => Ok(Command::CopySelection),
-            "cut" => Ok(Command::CutSelection),
-            "paste" => Ok(Command::Paste),
-            "fue" | "find_under_expand" => Ok(Command::FindUnderExpand),
-            "fn" | "find_next" => Ok(Command::FindNext),
-            "fp" | "find_prev" => Ok(Command::FindPrev),
-            "hide_overlay" => Ok(Command::Cancel),
-            "s" | "save" => Ok(Command::Save(None)),
-            "q" | "quit" | "exit" => Ok(Command::Quit),
-            "b" | "back" | "left_delete" => Ok(Command::Back),
-            "d" | "delete" | "right_delete" => Ok(Command::Delete),
-            "bn" | "next-buffer" | "next_view" => Ok(Command::NextBuffer),
-            "bp" | "prev-buffer" | "prev_view" => Ok(Command::PrevBuffer),
-            "undo" => Ok(Command::Undo),
-            "redo" => Ok(Command::Redo),
-            "ln" | "line-numbers" => Ok(Command::ToggleLineNumbers),
-            "op" | "open-prompt" => Ok(Command::OpenPrompt(CommandPromptMode::Command)),
-            "show_overlay" => {
-                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_overlay".to_string()})?;
-                match args.get("overlay") {
-                    None => Err(ParseCommandError::UnexpectedArgument),
-                    Some(value) => match value {
-                                        // We should catch "command_palette" here instead, but because of a bug in termion
-                                        // we can't parse ctrl+shift+p...
-                                        // Later on we might introduce another prompt mode for "goto" as well.
-                                        Value::String(x) if x == "goto" => Ok(Command::OpenPrompt(CommandPromptMode::Command)),
-                                        _ => Err(ParseCommandError::UnexpectedArgument),
-                                   }
-                }
-            }
-
-            "show_panel" => {
-                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "show_panel".to_string()})?;
-                match args.get("panel") {
-                    None => Err(ParseCommandError::UnexpectedArgument),
-                    Some(value) => match value {
-                                        Value::String(x) if x == "find" => Ok(Command::OpenPrompt(CommandPromptMode::Find)),
-                                        _ => Err(ParseCommandError::UnexpectedArgument),
-                                   }
-                }
-            }
-
-
-            "move"    => {
-                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
-                let cmd : RelativeMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
-                Ok(Command::RelativeMove(cmd))
-            },
-            "move_to" => {
-                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move_to".to_string()})?;
-                let cmd : AbsoluteMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
-                Ok(Command::AbsoluteMove(cmd))
-            },
-            "select_lines" => {
-                let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "select_lines".to_string()})?;
-                let cmd : ExpandLinesDirection = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
-                Ok(Command::CursorExpandLines(cmd))
-            },
-            command => Err(ParseCommandError::UnknownCommand(command.into())),
-        }
-    }
-}
-
-impl FromPrompt for Command {
-    fn from_prompt(input: &str) -> Result<Command, ParseCommandError> {
-        let mut parts: Vec<&str> = input.splitn(2, ' ').collect();
-        let cmd = parts.remove(0);
-
-        // If we have prompt-arguments, we parse them directly to a command instead of going via json
-        let args = parts.get(0);
-        match cmd.as_ref() {
-            // First, catch some prompt-specific commands (usually those with arguments),
-            // which need different parsing than whats coming from the keymap-file
-            "move"    => {
-                let arg = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
-                RelativeMove::from_prompt(arg)
-            },
-            "move_to" => {
-                let arg = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "move".to_string()})?;
-                AbsoluteMove::from_prompt(arg)
-            },
-            "t" | "theme" => {
-                let theme = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "theme".to_string()})?;
-                Ok(Command::SetTheme(theme.to_string()))
-            },
-            "o" | "open" => {
-                // Don't split given arguments by space, as filenames can have spaces in them as well!
-                let filename = match args {
-                    Some(name) => {
-                        // We take the value given from the prompt and run it through shellexpand,
-                        // to translate to a real path (e.g. "~/.bashrc" doesn't work without this)
-                        let expanded_name = shellexpand::full(name)
-                                               .map_err(|_| ParseCommandError::UnknownCommand(name.to_string()))?;
-                        Some(expanded_name.to_string())
-                    },
-
-                    // If no args where given we open with "None", which is ok, too.
-                    None => None,
-                };
-                Ok(Command::Open(filename))
-            }
-
-            "f" | "find" => {
-                let needle = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "find".to_string()})?;
-                FindConfig::from_prompt(needle)
-            },
-
-            // The stuff we don't handle here, we pass on to the default parsing function
-            // Since there is no way to know the shape of "args", we drop all 
-            // potentially given prompt-args for this command here.
-            command => Command::from_keymap_entry(KeymapEntry{keys: Vec::new(), 
-                                                  command: command.to_string(), 
-                                                  args: None, 
-                                                  context: None})
-        }
-    }
-}
-
-impl ToPrompt for Command {
-    fn to_prompt(&self) -> String {
-        use Command::*;
-
-        let mut ret = String::new();
-        match self {
-            Cancel => ret.push_str("cancel"),
-            Quit => ret.push_str("quit"),
-            Save(_) => ret.push_str("save"),
-            Back => ret.push_str("back"),
-            Delete => ret.push_str("delete"),
-            Open(_) => ret.push_str("open"),
-            NextBuffer => ret.push_str("buffernext"),
-            PrevBuffer => ret.push_str("bufferprev"),
-            RelativeMove(x) => ret.push_str(&x.to_prompt()),
-            AbsoluteMove(x) => ret.push_str(&x.to_prompt()),
-            SetTheme(_) => ret.push_str("settheme"),
-            ToggleLineNumbers => ret.push_str("togglelinenumbers"),
-            OpenPrompt(_) => ret.push_str("open-prompt"),
-            Insert(_) => ret.push_str("insert"),
-            Undo => ret.push_str("undo"),
-            Redo => ret.push_str("redo"),
-            Find(_) => ret.push_str("find"),
-            FindNext => ret.push_str("findnext"),
-            FindPrev => ret.push_str("findprev"),
-            FindUnderExpand => ret.push_str("find_under_expand"),
-            CursorExpandLines(_) => ret.push_str("cursor_expand_lines"),
-            CopySelection => ret.push_str("copy"),
-            Paste => ret.push_str("paste"),
-            CutSelection => ret.push_str("cut"),
-            CloseCurrentView => ret.push_str("close"),
-            SelectAll => ret.push_str("selecta_ll"),
-        }
-        ret
-    }
 }

@@ -6,29 +6,43 @@ use std::io::Error;
 use std::io::Write;
 use termion::event::{Event, Key};
 
-use crate::core::{Command, ParseCommandError, FromPrompt, FindConfig, Keymap};
+use crate::core::{Command, ParseCommandError, FromPrompt, FindConfig, ParserMap};
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum CommandPromptMode {
-    // Parse commands from user-input
+    /// Do not display Prompt
+    Inactive,
+    /// Parse commands from user-input
     Command,
-    // Switch directly to search-mode
+    /// Switch directly to search-mode
     Find,
 }
 
-#[derive(Debug)]
 pub struct CommandPrompt {
     mode: CommandPromptMode,
     dex: usize,
     chars: String,
-    keybindings: Keymap
+    prompt_texts: Vec<String>,
+    parser_map: ParserMap,
 }
 
 impl CommandPrompt {
-    pub fn new(mode: CommandPromptMode, keybindings: Keymap) -> CommandPrompt {
-        CommandPrompt{mode, dex: 0, chars: Default::default(), keybindings}
+    pub fn new(mode: CommandPromptMode, parser_map: ParserMap) -> CommandPrompt {
+        let mut prompt_texts = Vec::new();
+        for (key, parser) in &parser_map {
+            let keybinding = parser.keybinding.clone().unwrap_or(String::new());
+            if parser.subcommands.is_empty() {
+                prompt_texts.push(format!("{}   <{}>", key, &keybinding));
+            } else {
+                for subcommand in &parser.subcommands {
+                    prompt_texts.push(format!("{} {}   <{}>", key, subcommand, &keybinding));
+                }
+            }
+            // prompt_texts.push(format!("{} {}    [{}]", key, );
+        }
+        CommandPrompt{mode, dex: 0, chars: Default::default(), prompt_texts, parser_map}
     }
 
     /// Process a terminal event for the command prompt.
@@ -85,10 +99,21 @@ impl CommandPrompt {
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Result<Option<Command>, ParseCommandError> {
         match self.mode {
-            CommandPromptMode::Find => Ok(Some(FindConfig::from_prompt(&self.chars)?)),
-            CommandPromptMode::Command => Ok(Some(Command::from_prompt(&self.chars)?)),
+            CommandPromptMode::Find => Ok(Some(FindConfig::from_prompt(Some(&self.chars))?)),
+            CommandPromptMode::Command => {
+                // Split first word off, search for it in the map and hand the rest to the from_prompt-command
+                let mut splitvec = self.chars.splitn(1, ' ');
+                let cmd_name = splitvec.next().unwrap(); // Should not panic
+                let add_args = splitvec.next();
+                if let Some(parser) = self.parser_map.get::<str>(&cmd_name) {
+                    Ok(Some((parser.from_prompt)(add_args)?))
+                } else {
+                    Err(ParseCommandError::UnexpectedArgument)
+                }
+            },
+            // Shouldn't happen
+            CommandPromptMode::Inactive => Err(ParseCommandError::UnexpectedArgument)
         }
-        
     }
 
     fn render_suggestions<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
@@ -96,15 +121,14 @@ impl CommandPrompt {
             return Ok(())
         }
 
-        let vals : Vec<_> = self.keybindings.values().filter(|x| x.name.starts_with(&self.chars)).take(4).collect();
+        let vals : Vec<_> = self.prompt_texts.iter().filter(|x| x.starts_with(&self.chars)).take(4).collect();
         for (idx, val) in vals.iter().enumerate() {
             if let Err(err) = write!(
                 w,
-                "{}{}-> {}   [{}]",
+                "{}{}-> {}",
                 Goto(1, row - 1 - idx as u16),
                 ClearLine,
-                val.name,
-                val.keys,
+                val,
             ) {
                 error!("failed to render status bar: {:?}", err);
                 // TODO: Return error
@@ -113,10 +137,19 @@ impl CommandPrompt {
         Ok(())
     }
 
+    pub fn is_active(&self) -> bool {
+        self.mode != CommandPromptMode::Inactive
+    }
+
+    pub fn set_mode(&mut self, mode: CommandPromptMode) {
+        self.mode = mode;
+    }
+
     pub fn render<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
         let mode_indicator; 
 
         match self.mode {
+            CommandPromptMode::Inactive => {return Ok(());}
             CommandPromptMode::Find => {
                 mode_indicator = "find";
 
