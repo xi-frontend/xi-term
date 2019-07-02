@@ -137,7 +137,6 @@ impl Future for Editor {
 impl Editor {
     /// Handle keyboard and mouse events
     pub fn handle_input(&mut self, event: Event) {
-        // We have to remove and insert again, to beat the borrow-checker
         match event {
             Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),            
             ev => {
