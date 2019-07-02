@@ -28,7 +28,7 @@ impl KeybindingConfig {
         // let entries = fs::read_to_string(config_path)?;
         // Read the JSON contents of the file as an instance of `User`.
         let bindings: Vec<KeymapEntry> = json5::from_str(&DEFAULT_KEYBINDINGS)?;
-        error!("Bindings parsed!");
+        debug!("Bindings parsed!");
         let mut parser_map = get_parser_map();
         let mut keymap = KeyMap::new();
         let mut found_cmds = Vec::new();
@@ -51,7 +51,7 @@ impl KeybindingConfig {
                 }
 
                 if let Some(keyevent) = KeybindingConfig::parse_keys(&binding.keys) {
-                    error!("{:?} = {:?}", cmd, binding);
+                    info!("{:?} = {:?}", cmd, binding);
                     keymap.insert(keyevent, cmd.clone());
                     parser.keybinding = Some(binding.keys[0].clone());
                     found_cmds.push(cmd);
