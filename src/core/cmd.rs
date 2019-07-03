@@ -212,26 +212,25 @@ pub trait FromPrompt {
     fn from_prompt(vals: Option<&str>) -> Result<Command, ParseCommandError>;
 }
 
-#[allow(non_camel_case_types)]
+#[serde(rename_all = "snake_case")] 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum RelativeMoveDistance {
     /// Move only one character
-    characters,
+    Characters,
     /// Move a line
-    lines,
+    Lines,
     /// Move to new word
-    words,
+    Words,
     /// Move to end of word
-    word_ends,
+    WordEnds,
     /// Move to new subword
-    subwords,
+    Subwords,
     /// Move to end of subword
-    subword_ends,
+    SubwordEnds,
     /// Move a page
-    pages,
+    Pages,
 }
 
-#[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct RelativeMove {
     pub by: RelativeMoveDistance,
@@ -256,42 +255,42 @@ impl FromPrompt for RelativeMove {
         match vals[0] {
             "d" | "down" => Ok(Command::RelativeMove(
                                 RelativeMove{
-                                            by: RelativeMoveDistance::lines, 
+                                            by: RelativeMoveDistance::Lines, 
                                             forward: true, 
                                             extend
                                             }
                                )),
             "u" | "up" => Ok(Command::RelativeMove(
                                 RelativeMove{
-                                            by: RelativeMoveDistance::lines, 
+                                            by: RelativeMoveDistance::Lines, 
                                             forward: false, 
                                             extend
                                             }
                                )),
             "r" | "right" => Ok(Command::RelativeMove(
                                 RelativeMove{
-                                            by: RelativeMoveDistance::characters, 
+                                            by: RelativeMoveDistance::Characters, 
                                             forward: true, 
                                             extend
                                             }
                                )),
             "l" | "left" => Ok(Command::RelativeMove(
                                 RelativeMove{
-                                            by: RelativeMoveDistance::characters, 
+                                            by: RelativeMoveDistance::Characters, 
                                             forward: false, 
                                             extend
                                             }
                                )),
             "pd" | "page-down" => Ok(Command::RelativeMove(
                                         RelativeMove{
-                                                    by: RelativeMoveDistance::pages, 
+                                                    by: RelativeMoveDistance::Pages, 
                                                     forward: true, 
                                                     extend
                                                     }
                                        )),
             "pu" | "page-up" => Ok(Command::RelativeMove(
                                         RelativeMove{
-                                                    by: RelativeMoveDistance::pages, 
+                                                    by: RelativeMoveDistance::Pages, 
                                                     forward: false, 
                                                     extend
                                                     }
@@ -301,24 +300,23 @@ impl FromPrompt for RelativeMove {
     }
 }
 
-#[allow(non_camel_case_types)]
+#[serde(rename_all = "lowercase")]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum AbsoluteMovePoint {
     /// Beginning of file
-    bof,
+    BOF,
     /// End of file
-    eof,
+    EOF,
     /// Beginning of line
-    bol,
+    BOL,
     /// End of line
-    eol,
+    EOL,
     /// Enclosing brackets
-    brackets,
+    Brackets,
     /// Line number
-    line(u64)
+    Line(u64)
 }
 
-#[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct AbsoluteMove {
     pub to: AbsoluteMovePoint,
@@ -342,25 +340,25 @@ impl FromPrompt for AbsoluteMove {
         match vals[0] {
             "bof" | "beginning-of-file" => Ok(Command::AbsoluteMove(
                                                     AbsoluteMove{
-                                                                to: AbsoluteMovePoint::bof,
+                                                                to: AbsoluteMovePoint::BOF,
                                                                 extend
                                                                 }
                                                    )),
             "eof" | "end-of-file" => Ok(Command::AbsoluteMove(
                                                     AbsoluteMove{
-                                                                to: AbsoluteMovePoint::eof,
+                                                                to: AbsoluteMovePoint::EOF,
                                                                 extend
                                                                 }
                                                    )),
             "bol" | "beginning-of-line" => Ok(Command::AbsoluteMove(
                                                     AbsoluteMove{
-                                                                to: AbsoluteMovePoint::bol,
+                                                                to: AbsoluteMovePoint::BOL,
                                                                 extend
                                                                 }
                                                    )),
             "eol" | "end-of-line" => Ok(Command::AbsoluteMove(
                                                     AbsoluteMove{
-                                                                to: AbsoluteMovePoint::eol,
+                                                                to: AbsoluteMovePoint::EOL,
                                                                 extend
                                                                 }
                                                    )),
@@ -369,7 +367,7 @@ impl FromPrompt for AbsoluteMove {
                 let number = command.parse::<u64>().map_err(|_| ParseCommandError::UnknownCommand(command.into()))?;
                 Ok(Command::AbsoluteMove(
                                 AbsoluteMove{
-                                            to: AbsoluteMovePoint::line(number),
+                                            to: AbsoluteMovePoint::Line(number),
                                             extend: false
                                             }
                                 )
@@ -380,7 +378,6 @@ impl FromPrompt for AbsoluteMove {
     }
 }
 
-#[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct ExpandLinesDirection {
     pub forward: bool

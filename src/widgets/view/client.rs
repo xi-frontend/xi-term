@@ -48,28 +48,28 @@ impl Client {
             Command::FindPrev => self.find_prev(),
             Command::RelativeMove(x) => {
                 match x.by {
-                    RelativeMoveDistance::characters => {
+                    RelativeMoveDistance::Characters => {
                         if x.forward {
                             self.right(x.extend)
                         } else {
                             self.left(x.extend)
                         }
                     },
-                    RelativeMoveDistance::words | RelativeMoveDistance::word_ends => {
+                    RelativeMoveDistance::Words | RelativeMoveDistance::WordEnds => {
                         if x.forward {
                             self.word_right(x.extend)
                         } else {
                             self.word_left(x.extend)
                         }
                     },
-                    RelativeMoveDistance::pages => {
+                    RelativeMoveDistance::Pages => {
                         if x.forward {
                             self.page_down(x.extend)
                         } else {
                             self.page_up(x.extend)
                         }
                     },
-                    RelativeMoveDistance::lines => {
+                    RelativeMoveDistance::Lines => {
                         if x.forward {
                             self.down(x.extend)
                         } else {
@@ -81,11 +81,11 @@ impl Client {
             }
             Command::AbsoluteMove(x) => {
                 match x.to {
-                    AbsoluteMovePoint::bol => self.line_start(x.extend),
-                    AbsoluteMovePoint::eol => self.line_end(x.extend),
-                    AbsoluteMovePoint::bof => self.document_begin(x.extend),
-                    AbsoluteMovePoint::eof => self.document_end(x.extend),
-                    AbsoluteMovePoint::line(line) => self.goto_line(line),
+                    AbsoluteMovePoint::BOL => self.line_start(x.extend),
+                    AbsoluteMovePoint::EOL => self.line_end(x.extend),
+                    AbsoluteMovePoint::BOF => self.document_begin(x.extend),
+                    AbsoluteMovePoint::EOF => self.document_end(x.extend),
+                    AbsoluteMovePoint::Line(line) => self.goto_line(line),
                     _ => unimplemented!()
                 }
             }
