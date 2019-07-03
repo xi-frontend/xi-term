@@ -98,11 +98,11 @@ impl CommandPrompt {
 
     /// Gets called when return is pressed,
     fn finalize(&mut self) -> Result<Option<Command>, ParseCommandError> {
-        match self.mode {
+        let res = match self.mode {
             CommandPromptMode::Find => Ok(Some(FindConfig::from_prompt(Some(&self.chars))?)),
             CommandPromptMode::Command => {
                 // Split first word off, search for it in the map and hand the rest to the from_prompt-command
-                let mut splitvec = self.chars.splitn(1, ' ');
+                let mut splitvec = self.chars.splitn(2, ' ');
                 let cmd_name = splitvec.next().unwrap(); // Should not panic
                 let add_args = splitvec.next();
                 if let Some(parser) = self.parser_map.get::<str>(&cmd_name) {
@@ -113,7 +113,10 @@ impl CommandPrompt {
             },
             // Shouldn't happen
             CommandPromptMode::Inactive => Err(ParseCommandError::UnexpectedArgument)
-        }
+        };
+        // Prompt was finalized. Close it now. 
+        self.mode = CommandPromptMode::Inactive;
+        res
     }
 
     fn render_suggestions<W: Write>(&mut self, w: &mut W, row: u16) -> Result<(), Error> {
