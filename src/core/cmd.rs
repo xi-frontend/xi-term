@@ -131,7 +131,7 @@ pub fn get_parser_map() -> ParserMap {
                 let cmd : AbsoluteMove = serde_json::from_value(args).map_err(|_| ParseCommandError::UnexpectedArgument)?;
                 Ok(Command::AbsoluteMove(cmd))})});
     map.insert("select_lines", CommandParser{ keybinding: None,
-        from_prompt: AbsoluteMove::from_prompt, 
+        from_prompt: ExpandLinesDirection::from_prompt,
         subcommands: vec!["above", "below"],
         from_keymap_entry: Some(|val| {
                 let args = val.args.ok_or(ParseCommandError::ExpectedArgument{cmd: "select_lines".to_string()})?;
@@ -382,6 +382,22 @@ impl FromPrompt for AbsoluteMove {
 pub struct ExpandLinesDirection {
     pub forward: bool
 }
+
+impl FromPrompt for ExpandLinesDirection {
+    fn from_prompt(args: Option<&str>) -> Result<Command, ParseCommandError> {
+        let arg = args.ok_or(ParseCommandError::ExpectedArgument{cmd: "select_lines".to_string()})?;
+        match arg {
+            "a" | "above" => Ok(Command::CursorExpandLines(
+                                                    ExpandLinesDirection{forward: false}
+                                                   )),
+            "b" | "below" => Ok(Command::CursorExpandLines(
+                                                    ExpandLinesDirection{forward: true}
+                                                   )),
+            command => Err(ParseCommandError::UnknownCommand(command.into()))
+        }
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FindConfig {
