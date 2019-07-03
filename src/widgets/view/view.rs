@@ -1,12 +1,16 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::io::Write;
+use futures::future::Future;
 
 use failure::Error;
 use termion::clear::CurrentLine as ClearLine;
 use termion::cursor::Goto;
-use termion::event::{Event, Key, MouseButton, MouseEvent};
+use termion::event::{MouseButton, MouseEvent};
 use xrl::{ConfigChanges, Line, LineCache, Style, Update};
+use serde_json::Value;
+
+use crate::core::Command;
 
 use super::cfg::ViewConfig;
 use super::client::Client;
@@ -26,6 +30,8 @@ pub struct View {
     file: Option<String>,
     client: Client,
     cfg: ViewConfig,
+
+    search_in_progress: bool,
 }
 
 impl View {
@@ -37,6 +43,7 @@ impl View {
             cfg: ViewConfig::default(),
             client,
             file,
+            search_in_progress: false,
         }
     }
 
@@ -75,52 +82,8 @@ impl View {
         self.client.scroll(top, bottom);
     }
 
-    pub fn insert(&mut self, c: char) {
-        self.client.insert(c)
-    }
-
-    pub fn insert_newline(&mut self) {
-        self.client.insert_newline()
-    }
-
-    pub fn insert_tab(&mut self) {
-        self.client.insert_tab()
-    }
-
     pub fn save(&mut self) {
         self.client.save(self.file.as_ref().unwrap())
-    }
-
-    pub fn back(&mut self) {
-        self.client.backspace()
-    }
-
-    pub fn delete(&mut self) {
-        self.client.delete()
-    }
-
-    pub fn page_down(&mut self) {
-        self.client.page_down()
-    }
-
-    pub fn page_up(&mut self) {
-        self.client.page_up()
-    }
-
-    pub fn move_left(&mut self) {
-        self.client.left()
-    }
-
-    pub fn move_right(&mut self) {
-        self.client.right()
-    }
-
-    pub fn move_up(&mut self) {
-        self.client.up()
-    }
-
-    pub fn move_down(&mut self) {
-        self.client.down()
     }
 
     pub fn toggle_line_numbers(&mut self) {
@@ -182,47 +145,57 @@ impl View {
         self.client.click(line, column);
     }
 
+    fn click_cursor_extend(&mut self, x: u64, y: u64) {
+        let (line, column) = self.get_click_location(x, y);
+        self.client.click_cursor_extend(line, column);
+    }
+
     fn drag(&mut self, x: u64, y: u64) {
         let (line, column) = self.get_click_location(x, y);
         self.client.drag(line, column);
     }
 
-    pub fn handle_input(&mut self, event: Event) {
-        match event {
-            Event::Key(key) => match key {
-                Key::Char(c) => match c {
-                    '\n' => self.insert_newline(),
-                    '\t' => self.insert_tab(),
-                    _ => self.insert(c),
-                },
-                Key::Ctrl(c) => match c {
-                    'w' => self.save(),
-                    'h' => self.back(),
-                    _ => error!("un-handled input ctrl+{}", c),
-                },
-                Key::Backspace => self.back(),
-                Key::Delete => self.delete(),
-                Key::Left => self.client.left(),
-                Key::Right => self.client.right(),
-                Key::Up => self.client.up(),
-                Key::Down => self.client.down(),
-                Key::Home => self.client.home(),
-                Key::End => self.client.end(),
-                Key::PageUp => self.page_up(),
-                Key::PageDown => self.page_down(),
-                k => error!("un-handled key {:?}", k),
+    fn find_under_expand(&mut self) {
+        if self.search_in_progress {
+            self.client.find_under_expand_next()
+        } else {
+            self.search_in_progress = true;
+            self.client.find_under_expand()
+        }
+    }
+
+    pub fn paste(&mut self, text: &str) {
+        self.client.paste(text)
+    }
+
+    pub fn copy(&mut self) -> impl Future<Item = Value, Error = xrl::ClientError> {
+        self.client.copy()
+    }
+
+    pub fn cut(&mut self) -> impl Future<Item = Value, Error = xrl::ClientError> {
+        self.client.cut()
+    }
+
+    pub fn handle_command(&mut self, cmd: Command) {
+        match cmd {
+            Command::ToggleLineNumbers => self.toggle_line_numbers(),
+            Command::FindUnderExpand => self.find_under_expand(),
+            Command::Cancel => { self.search_in_progress = false; self.client.collapse_selections() },
+            client_command => self.client.handle_command(client_command),
+        }
+    }
+
+    pub fn handle_mouse_event(&mut self, mouse_event: MouseEvent) {
+        match mouse_event {
+            MouseEvent::Press(press_event, y, x) => match press_event {
+                MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
+                MouseButton::Middle => self.click_cursor_extend(u64::from(x) - 1, u64::from(y) - 1),
+                MouseButton::WheelUp => self.client.up(false),
+                MouseButton::WheelDown => self.client.down(false),
+                button => error!("un-handled button {:?}", button),
             },
-            Event::Mouse(mouse_event) => match mouse_event {
-                MouseEvent::Press(press_event, y, x) => match press_event {
-                    MouseButton::Left => self.click(u64::from(x) - 1, u64::from(y) - 1),
-                    MouseButton::WheelUp => self.client.up(),
-                    MouseButton::WheelDown => self.client.down(),
-                    button => error!("un-handled button {:?}", button),
-                },
-                MouseEvent::Release(..) => {}
-                MouseEvent::Hold(y, x) => self.drag(u64::from(x) - 1, u64::from(y) - 1),
-            },
-            ev => error!("un-handled event {:?}", ev),
+            MouseEvent::Release(..) => {}
+            MouseEvent::Hold(y, x) => self.drag(u64::from(x) - 1, u64::from(y) - 1),
         }
     }
 

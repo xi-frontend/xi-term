@@ -6,22 +6,31 @@ use futures::{Async, Future, Poll, Stream};
 
 use failure::Error;
 use indexmap::IndexMap;
-use termion::event::Event as TermionEvent;
+use termion::event::{Event, Key};
+use serde_json::Value;
+
 use xrl::{Client, ConfigChanged, ScrollTo, Style, Update, ViewId, XiNotification};
 
-use core::CoreEvent;
-use widgets::{View, ViewClient};
+use crate::core::{Command, CoreEvent, KeyMap};
+
+use crate::widgets::{View, ViewClient};
+
+#[derive(Debug)]
+pub enum XiReply {
+    NewView((ViewId, Option<String>)),
+    CopiedText(Option<String>),
+}
 
 /// The main interface to xi-core
 pub struct Editor {
     /// Channel from which the responses to "new_view" requests are
     /// received. Upon receiving a `ViewId`, the `Editdor` creates a
     /// new view.
-    pub new_view_rx: UnboundedReceiver<(ViewId, Option<String>)>,
+    pub xi_reply_rx: UnboundedReceiver<XiReply>,
 
     /// Channel into which the responses to "new_view" requests are
     /// sent, when they are received from the core.
-    pub new_view_tx: UnboundedSender<(ViewId, Option<String>)>,
+    pub xi_reply_tx: UnboundedSender<XiReply>,
 
     /// Store the events that we cannot process right away.
     ///
@@ -44,24 +53,29 @@ pub struct Editor {
 
     pub size: (u16, u16),
     pub styles: HashMap<u64, Style>,
+
+    pub keymap: KeyMap,
+    clipboard: Option<String>,
 }
 
 /// Methods for general use.
 impl Editor {
-    pub fn new(client: Client) -> Editor {
+    pub fn new(client: Client, keymap: KeyMap) -> Editor {
         let mut styles = HashMap::new();
         styles.insert(0, Default::default());
-        let (new_view_tx, new_view_rx) = mpsc::unbounded::<(ViewId, Option<String>)>();
+        let (xi_reply_tx, xi_reply_rx) = mpsc::unbounded::<XiReply>();
 
         Editor {
-            new_view_rx,
-            new_view_tx,
+            xi_reply_rx,
+            xi_reply_tx,
             delayed_events: Vec::new(),
             views: IndexMap::new(),
             current_view: ViewId(0),
             client,
             size: (0, 0),
             styles,
+            keymap,
+            clipboard: None,
         }
     }
 }
@@ -88,8 +102,8 @@ impl Future for Editor {
 
         debug!("polling 'new_view' responses");
         loop {
-            match self.new_view_rx.poll() {
-                Ok(Async::Ready(Some((view_id, file_path)))) => {
+            match self.xi_reply_rx.poll() {
+                Ok(Async::Ready(Some(XiReply::NewView((view_id, file_path))))) => {
                     info!("creating new view {:?}", view_id);
                     let client = ViewClient::new(self.client.clone(), view_id);
                     let mut view = View::new(client, file_path);
@@ -98,6 +112,12 @@ impl Future for Editor {
                     info!("switching to view {:?}", view_id);
                     self.current_view = view_id;
                 }
+
+                Ok(Async::Ready(Some(XiReply::CopiedText(text)))) => {
+                    info!("Got new text for clipboard {:?}", text);
+                    self.clipboard = text;
+                }
+
                 // We own one of the senders so this cannot happen
                 Ok(Async::Ready(None)) => unreachable!(),
                 Ok(Async::NotReady) => {
@@ -105,7 +125,7 @@ impl Future for Editor {
                     break;
                 }
                 Err(e) => {
-                    error!("Uknown channel error: {:?}", e);
+                    error!("Unkown channel error: {:?}", e);
                     return Err(());
                 }
             }
@@ -116,9 +136,41 @@ impl Future for Editor {
 
 impl Editor {
     /// Handle keyboard and mouse events
-    pub fn handle_input(&mut self, event: TermionEvent) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.handle_input(event)
+    pub fn handle_input(&mut self, event: Event) {
+        match event {
+            Event::Mouse(mouse_event) => self.views.get_mut(&self.current_view).unwrap().handle_mouse_event(mouse_event),            
+            ev => {
+                match self.keymap.get(&ev).cloned() {
+                    Some(cmd) => self.handle_command(cmd),
+                    None => { 
+                        if let Some(view) = self.views.get_mut(&self.current_view) {
+                            match ev {
+                                Event::Key(Key::Char(c)) => view.handle_command(Command::Insert(c)),
+                                k => error!("un-handled key {:?}", k)
+                            }
+                        }
+                    }
+                }
+            },
+        }
+    }
+
+    pub fn handle_command(&mut self, cmd: Command) {
+        match cmd {
+            Command::SetTheme(theme) => self.set_theme(&theme),
+            Command::NextBuffer => self.next_buffer(),
+            Command::PrevBuffer => self.prev_buffer(),
+            Command::Save(view_id) => self.save(view_id),
+            Command::Open(file) => self.new_view(file),
+            Command::CloseCurrentView => self.close_view(None),
+            Command::CopySelection => self.copy(),
+            Command::CutSelection => self.cut(),
+            Command::Paste => self.paste(),
+            view_command => {
+                        if let Some(view) = self.views.get_mut(&self.current_view) {
+                            view.handle_command(view_command)
+                        }
+            }
         }
     }
 
@@ -184,8 +236,92 @@ impl Editor {
 
     /// Spawn a future that sends a "new_view" request to the core,
     /// and forwards the response back to the `Editor`.
+    pub fn close_view(&mut self, view_id: Option<ViewId>) {
+        if self.views.len() <= 1 {
+            // We don't close the last view.
+            // TODO: Exit the editor instead
+            return;
+        }
+
+        let mut closed = false;
+        let view_to_close = view_id.unwrap_or(self.current_view);
+        if let Some(view) = self.views.get_mut(&view_to_close) {
+            view.handle_command(Command::CloseCurrentView);
+            closed = true;
+        }
+        if closed {
+            self.prev_buffer();
+            self.views.remove(&view_to_close);
+        }
+    }
+
+    /// Spawn a future that sends a "copy" request to the core,
+    /// and forwards the response back to the `Editor`.
+    fn copy(&mut self) {
+        let response_tx = self.xi_reply_tx.clone();
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            let future = view.copy()
+                                .and_then(move |x| {
+                                    // when we get the response from the core, forward the copied
+                                    // text to the editor so that the clipboard can be filled/replaced
+                                    let text = match x {
+                                               Value::String(s) => Some(s),
+                                               z => { error!("ERROR when parsing copy-answer: Wrong type. {:?}", z); None },
+                                    };
+                                    response_tx
+                                        .unbounded_send(XiReply::CopiedText(text))
+                                        .unwrap_or_else(|e| error!("failed to send \"CopiedText\" response: {:?}", e));
+                                    Ok(())
+                                })
+                                .or_else(|client_error| {
+                                    error!("failed to send \"CopiedText\" response: {:?}", client_error);
+                                    Ok(())
+                                });
+            tokio::spawn(future);
+        }
+    }
+
+
+    /// Spawn a future that sends a "cut" request to the core,
+    /// and forwards the response back to the `Editor`.
+    fn cut(&mut self) {
+        let response_tx = self.xi_reply_tx.clone();
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            let future = view.cut()
+                                .and_then(move |x| {
+                                    // when we get the response from the core, forward the copied
+                                    // text to the editor so that the clipboard can be filled/replaced
+                                    let text = match x {
+                                               Value::String(s) => Some(s),
+                                               z => { error!("ERROR when parsing cut-answer: Wrong type. {:?}", z); None },
+                                    };
+                                    response_tx
+                                        .unbounded_send(XiReply::CopiedText(text))
+                                        .unwrap_or_else(|e| error!("failed to send \"CopiedText\" response: {:?}", e));
+                                    Ok(())
+                                })
+                                .or_else(|client_error| {
+                                    error!("failed to send \"CopiedText\" response: {:?}", client_error);
+                                    Ok(())
+                                });
+            tokio::spawn(future);
+        }
+    }
+
+    // Paste clipboard
+    fn paste(&mut self) {
+        if let Some(view) = self.views.get_mut(&self.current_view) {
+            match self.clipboard {
+                Some(ref content) => view.paste(content),
+                None => {}
+            };
+        }
+    }
+
+    /// Spawn a future that sends a "new_view" request to the core,
+    /// and forwards the response back to the `Editor`.
     pub fn new_view(&mut self, file_path: Option<String>) {
-        let response_tx = self.new_view_tx.clone();
+        let response_tx = self.xi_reply_tx.clone();
         let future = self
             .client
             .new_view(file_path.clone())
@@ -193,7 +329,7 @@ impl Editor {
                 // when we get the response from the core, forward the new
                 // view id to the editor so that the view can be created
                 response_tx
-                    .unbounded_send((id, file_path))
+                    .unbounded_send(XiReply::NewView((id, file_path)))
                     .unwrap_or_else(|e| error!("failed to send \"new_view\" response: {:?}", e));
                 Ok(())
             })
@@ -218,18 +354,6 @@ impl Editor {
         }
     }
 
-    pub fn back(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.back();
-        }
-    }
-
-    pub fn delete(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.delete();
-        }
-    }
-
     pub fn next_buffer(&mut self) {
         if let Some((dex, _, _)) = self.views.get_full(&self.current_view) {
             if dex + 1 == self.views.len() {
@@ -251,48 +375,6 @@ impl Editor {
             } else if let Some((view, _)) = self.views.get_index(dex - 1) {
                 self.current_view = *view;
             }
-        }
-    }
-
-    pub fn move_left(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_left();
-        }
-    }
-
-    pub fn move_right(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_right();
-        }
-    }
-
-    pub fn move_up(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_up();
-        }
-    }
-
-    pub fn move_down(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.move_down();
-        }
-    }
-
-    pub fn page_down(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.page_down();
-        }
-    }
-
-    pub fn page_up(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.page_up();
-        }
-    }
-
-    pub fn toggle_line_numbers(&mut self) {
-        if let Some(view) = self.views.get_mut(&self.current_view) {
-            view.toggle_line_numbers();
         }
     }
 }

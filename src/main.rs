@@ -5,18 +5,15 @@
 #[macro_use]
 extern crate clap;
 
-extern crate failure;
-
 #[macro_use]
 extern crate log;
-extern crate log4rs;
 
-extern crate futures;
-extern crate indexmap;
-extern crate termion;
-extern crate tokio;
-extern crate xdg;
-extern crate xrl;
+#[macro_use]
+extern crate serde_json;
+
+use log4rs;
+use tokio;
+use xrl;
 
 mod core;
 mod widgets;
@@ -29,7 +26,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
 
-use core::{Command, Tui, TuiServiceBuilder};
+use crate::core::{Command, Tui, TuiServiceBuilder, KeybindingConfig};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();
@@ -93,6 +90,10 @@ fn run() -> Result<(), Error> {
         configure_logs(logfile);
     }
 
+    // let configfile = std::path::Path::new("./configs/Default (Linux).sublime-keymap").to_owned();
+    // let keybindings = KeybindingConfig::parse(&configfile).map_err(Error::from_boxed_compat)?;
+    let keybindings = KeybindingConfig::parse().map_err(Error::from_boxed_compat)?;
+
     tokio::run(future::lazy(move || {
         info!("starting xi-core");
         let (tui_service_builder, core_events_rx) = TuiServiceBuilder::new();
@@ -122,12 +123,12 @@ fn run() -> Result<(), Error> {
                 .map_err(|e| error!("failed to send \"client_started\" {:?}", e))
                 .and_then(move |_| {
                     info!("initializing the TUI");
-                    let mut tui = Tui::new(client_clone, core_events_rx)
+                    let mut tui = Tui::new(client_clone, core_events_rx, keybindings)
                         .expect("failed to initialize the TUI");
                     tui.run_command(Command::Open(
                         matches.value_of("file").map(ToString::to_string),
                     ));
-                    tui.run_command(Command::SetTheme("base16-eighties.dark".into()));
+                    tui.run_command(Command::SetTheme("Solarized (dark)".into()));
                     tui.map_err(|e| error!("TUI exited with an error: {:?}", e))
                 })
         }));

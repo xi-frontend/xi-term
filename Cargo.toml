@@ -2,6 +2,7 @@
 authors = ["Corentin Henry <corentinhenry@gmail.com>"]
 name = "xi-term"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 clap = "2.33.0"
@@ -14,3 +15,7 @@ tokio = "0.1.21"
 xdg = "2.2.0"
 indexmap = "1.0.2"
 xrl = "0.0.7"
+serde = { version = "1.0.93", features = ["derive"] }
+serde_json = "1.0.39"
+json5 = "0.2.4"
+shellexpand = "1.0"
