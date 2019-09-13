@@ -99,7 +99,7 @@ fn run() -> Result<(), Error> {
         let (client, core_stderr) = spawn(
             matches.value_of("core").unwrap_or("xi-core"),
             tui_service_builder,
-        );
+        ).unwrap();
 
         info!("starting logging xi-core errors");
         tokio::spawn(
