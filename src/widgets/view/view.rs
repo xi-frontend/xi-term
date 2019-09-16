@@ -95,6 +95,18 @@ impl View {
         self.client.backspace()
     }
 
+    pub fn select_all(&mut self) {
+        self.client.select_all()
+    }
+
+    pub fn undo(&mut self) {
+        self.client.undo()
+    }
+
+    pub fn redo(&mut self) {
+        self.client.redo()
+    }
+
     pub fn delete(&mut self) {
         self.client.delete()
     }
@@ -198,6 +210,9 @@ impl View {
                 Key::Ctrl(c) => match c {
                     'w' => self.save(),
                     'h' => self.back(),
+                    'z' => self.undo(),
+                    'y' => self.redo(),
+                    'a' => self.select_all(),
                     _ => error!("un-handled input ctrl+{}", c),
                 },
                 Key::Backspace => self.back(),
