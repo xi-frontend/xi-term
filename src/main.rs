@@ -11,6 +11,10 @@ extern crate failure;
 extern crate log;
 extern crate log4rs;
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate config;
 extern crate futures;
 extern crate indexmap;
 extern crate termion;
@@ -29,7 +33,7 @@ use log4rs::append::file::FileAppender;
 use log4rs::config::{Appender, Config, Logger, Root};
 use xrl::spawn;
 
-use core::{Command, Tui, TuiServiceBuilder};
+use core::{Command, Settings, Tui, TuiServiceBuilder};
 
 fn configure_logs(logfile: &str) {
     let tui = FileAppender::builder().build(logfile).unwrap();
@@ -81,6 +85,9 @@ fn main() {
 }
 
 fn run() -> Result<(), Error> {
+    // To enable placing any setting in the base config
+    let settings = Settings::new();
+
     let xi = clap_app!(
         xi =>
         (about: "The Xi Editor")
@@ -122,7 +129,7 @@ fn run() -> Result<(), Error> {
                 .map_err(|e| error!("failed to send \"client_started\" {:?}", e))
                 .and_then(move |_| {
                     info!("initializing the TUI");
-                    let mut tui = Tui::new(client_clone, core_events_rx)
+                    let mut tui = Tui::new(client_clone, core_events_rx, settings)
                         .expect("failed to initialize the TUI");
                     tui.run_command(Command::Open(
                         matches.value_of("file").map(ToString::to_string),

@@ -9,13 +9,16 @@ use xrl::{Client, Frontend, FrontendBuilder, MeasureWidth, XiNotification};
 
 use failure::Error;
 
-use core::{Command, Terminal, TerminalEvent};
+use core::{Command, Terminal, TerminalEvent, Settings};
 use widgets::{CommandPrompt, Editor};
 
 pub struct Tui {
     /// The editor holds the text buffers (named "views" in xi
     /// terminology).
     editor: Editor,
+
+    /// The application settings, read in at startup
+    settings: Settings,
 
     /// The command prompt is where users can type commands.
     prompt: Option<CommandPrompt>,
@@ -36,9 +39,14 @@ pub struct Tui {
 
 impl Tui {
     /// Create a new Tui instance.
-    pub fn new(client: Client, events: UnboundedReceiver<CoreEvent>) -> Result<Self, Error> {
+    pub fn new(client: Client,
+               events: UnboundedReceiver<CoreEvent>,
+               settings: Settings
+    ) -> Result<Self, Error> {
+        println!("{:?}", settings);
         Ok(Tui {
             terminal: Terminal::new()?,
+            settings: settings,
             exit: false,
             term_size: (0, 0),
             editor: Editor::new(client),
@@ -72,12 +80,20 @@ impl Tui {
             Command::PageDown => self.editor.page_down(),
             Command::PageUp => self.editor.page_up(),
             Command::ToggleLineNumbers => self.editor.toggle_line_numbers(),
+            Command::Noop => {},
         }
     }
 
     /// Global keybindings can be parsed here
     fn handle_input(&mut self, event: Event) {
         debug!("handling input {:?}", event);
+        // TODO handle input events based on settings here
+        //self.run_command(self.settings.get_command(event));
+
+
+        // Get the command for this key event based on the override layer
+        // if (let command = get_command(Event, "override") ==
+
         match event {
             Event::Key(Key::Ctrl('c')) => self.exit = true,
             Event::Key(Key::Alt('x')) => {
