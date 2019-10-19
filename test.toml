@@ -1,0 +1,33 @@
+# General configurations are in key = value form
+
+
+# Key maps are saved in layers, defined by prefixes.
+# The standard layer is named "base", so for example base.a = "write a"
+# Ctrl+a and Alt+a in a mapping are signified with ctrl-a and alt-a
+# If both Ctrl and Alt are used Ctrl goes first. ctrl-alt-a (not alt-ctrl-a) 
+
+# To create a layer, declare any of its bindings in the config.
+# To move to a layer, use "go_to_layer base", replace base with target layer
+
+# Layers support some additional behavioral flags. These are modal, held, blank
+# Modal means the layer remains active after one of its keys being pressed
+# Held means the layer is only active while the activating key is pressed down
+# Blank clears the defaults on the layer, so only the configured maps exist.
+# (Default is that any unbound key acts as it does on the default base layer)
+
+[keymaps]
+# Basic movement
+base.left = "ml"
+base.right = "mr"
+base.up = "mu"
+base.down = "md"
+
+# Bind a to the command "quit"
+base.a = "quit"
+# Declare that ctrl+a calls newline
+base.ctrl-a = "newline"
+# Declare that after entering b.a or similar the b stays until otherwise noted
+b.modal = "true"
+# Bind in an exit condition for the b mode, returning to the base layer
+b.q = "set_layer null"
+

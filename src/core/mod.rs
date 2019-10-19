@@ -6,3 +6,6 @@ pub use self::tui::{CoreEvent, Tui, TuiService, TuiServiceBuilder};
 
 mod cmd;
 pub use self::cmd::{Command, ParseCommandError};
+
+mod conf;
+pub use self::conf::Settings;

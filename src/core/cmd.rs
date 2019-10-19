@@ -7,6 +7,8 @@ use std::str::FromStr;
 
 #[derive(Debug)]
 pub enum Command {
+    /// Do nothing.
+    Noop,
     /// Close the CommandPrompt.
     Cancel,
     /// Quit editor.
@@ -66,6 +68,7 @@ impl FromStr for Command {
 
     fn from_str(s: &str) -> Result<Command, Self::Err> {
         match &s[..] {
+            "" | "noop" => Ok(Command::Noop),
             "s" | "save" => Ok(Command::Save(None)),
             "q" | "quit" => Ok(Command::Quit),
             "b" | "back" => Ok(Command::Back),
